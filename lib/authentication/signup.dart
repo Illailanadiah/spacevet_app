@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:spacevet_app/authentication/login.dart';
 import 'package:spacevet_app/color.dart';
-import 'package:spacevet_app/database_services.dart';
 import 'package:spacevet_app/wrapper.dart';
 
 class Signup extends StatefulWidget {
@@ -14,7 +13,6 @@ class Signup extends StatefulWidget {
 }
 
 class _SignupState extends State<Signup> {
-  final _dbService = DatabaseServices();
 
   TextEditingController email = TextEditingController();
   TextEditingController password = TextEditingController();
@@ -69,7 +67,6 @@ class _SignupState extends State<Signup> {
                 ElevatedButton(
                   onPressed: (() {
                     signup();
-                    _dbService.create();
                   }),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
