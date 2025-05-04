@@ -1,5 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:spacevet_app/wrapper.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -13,24 +15,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   signout() async {
     await FirebaseAuth.instance.signOut();
+    // Optionally, you can navigate to the login screen after signing out
+    Get.offAll(Wrapper());
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: [
-          Center(
+      body: Center(
             child: Text('${user!.email}'),
           ),
-          Padding(padding: const EdgeInsets.symmetric(horizontal: 28,vertical: 5),
-          child:Center(
-              child: Text("Successfully logged in as ${user!.email} using fingerprint authentication"),
-            ),
-          
-          ),
-        ],
-      ),
       floatingActionButton: FloatingActionButton(
         onPressed: (() => signout()),
         child: const Icon(Icons.login_rounded),
