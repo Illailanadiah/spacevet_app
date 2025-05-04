@@ -1,0 +1,2 @@
+C:/flutter/spacevet-app/spacevet_app/android/app/.cxx/Debug/573q4k3m/armeabi-v7a/CMakeFiles/edit_cache.dir
+C:/flutter/spacevet-app/spacevet_app/android/app/.cxx/Debug/573q4k3m/armeabi-v7a/CMakeFiles/rebuild_cache.dir

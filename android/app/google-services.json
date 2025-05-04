@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "773377368977",
+    "project_id": "space-vet-app",
+    "storage_bucket": "space-vet-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:773377368977:android:22fcad19352c9bc24cb030",
+        "android_client_info": {
+          "package_name": "com.example.spacevet_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "773377368977-38t7nj7shtsubemhmhbhsddflqktsdio.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.spacevet_app",
+            "certificate_hash": "e56072bdfa01de182f116c3c70d8cc14d16e1d54"
+          }
+        },
+        {
+          "client_id": "773377368977-td6s12ue42mnb3cogp0grcdktcfdv0e1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC8lej0B1pzKafpJMXSnBM5OyS_B3rkG6g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "773377368977-td6s12ue42mnb3cogp0grcdktcfdv0e1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

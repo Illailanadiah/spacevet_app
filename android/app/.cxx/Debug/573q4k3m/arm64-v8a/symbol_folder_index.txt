@@ -1,0 +1,1 @@
+C:\flutter\spacevet-app\spacevet_app\build\app\intermediates\cxx\Debug\573q4k3m\obj\arm64-v8a
