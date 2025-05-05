@@ -1,9 +1,10 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:spacevet_app/authentication/login.dart';
 import 'package:spacevet_app/color.dart';
-import 'package:spacevet_app/wrapper.dart';
+import 'package:spacevet_app/no_pet.dart';
 
 class Signup extends StatefulWidget {
   const Signup({super.key});
@@ -16,15 +17,34 @@ class _SignupState extends State<Signup> {
 
   TextEditingController email = TextEditingController();
   TextEditingController password = TextEditingController();
-  TextEditingController name = TextEditingController();
+  TextEditingController nickname = TextEditingController();
 
 
-  signup() async {
-    await FirebaseAuth.instance.createUserWithEmailAndPassword(
+  Future<void> signup() async {
+    try {
+      UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
       email: email.text,
       password: password.text,
     );
-    Get.offAll(Wrapper());
+
+    await FirebaseFirestore.instance.collection('users').doc(userCredential.user?.uid).set({
+      'name': nickname.text,
+      'email': email.text,
+    });
+    Get.snackbar("Success", "You have signed up successfully",
+        backgroundColor: AppColors.primary,
+        colorText: AppColors.background,
+        snackPosition: SnackPosition.BOTTOM);
+
+    Get.offAll(NoPetScreen());
+    } catch (e) {
+      print("Error: $e");
+      Get.snackbar("Error", "Failed to sign up",
+          backgroundColor: AppColors.primary,
+          colorText: AppColors.background,
+          snackPosition: SnackPosition.BOTTOM);
+      
+    } 
   }
 
   @override
@@ -47,8 +67,8 @@ class _SignupState extends State<Signup> {
                 const SizedBox(height: 20),
                 _buildTextField(
                   icon: Icons.person,
-                  hint: 'Enter your name',
-                  controller: name,
+                  hint: 'Nickname',
+                  controller: nickname,
                 ),
                 const SizedBox(height: 20),
                 _buildTextField(
