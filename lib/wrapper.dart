@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:spacevet_app/authentication/signup.dart';
 import 'package:spacevet_app/home_screen.dart';
-import 'package:spacevet_app/authentication/login.dart';
 
 class Wrapper extends StatefulWidget {
   const Wrapper({super.key});
@@ -21,7 +21,7 @@ class _WrapperState extends State<Wrapper> {
           return HomeScreen();
         }
         else{
-          return Login();
+          return Signup();
         }
       }),
     );

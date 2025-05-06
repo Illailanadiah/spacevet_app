@@ -1,9 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:spacevet_app/color.dart';
+import 'package:spacevet_app/color.dart'; // Adjust your app color
 import 'package:spacevet_app/drawer_screen.dart';
-import 'package:spacevet_app/pet_profile.dart'; // Import the pet profile screen
+import 'package:spacevet_app/pet_profile_screen.dart';
+import 'package:spacevet_app/symptom_detection_screen.dart'; // Import your hidden drawer
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,36 +20,15 @@ class _HomeScreenState extends State<HomeScreen> {
   bool isDrawerOpen = false;
 
   final user = FirebaseAuth.instance.currentUser;
-  String nickname = "";
-  String petName = "";
-  String petSize = "";
-  String petWeight = "";
-  String petPhotoUrl = "";
+  late String userId;
+  late Stream<DocumentSnapshot> userStream;
 
   @override
   void initState() {
     super.initState();
-    _fetchUserData();  // Fetch user and pet data after screen loads
-  }
-
-  // Fetch user data (nickname) and pet info from Firestore
-  _fetchUserData() async {
-    // Fetch nickname from users collection
-    final userDoc = await FirebaseFirestore.instance.collection('users').doc(user?.uid).get();
-    setState(() {
-      nickname = userDoc['nickname'] ?? "No nickname"; // Default if nickname not set
-    });
-
-    // Fetch pet data from pets collection (assuming user has pets)
-    final petDoc = await FirebaseFirestore.instance.collection('pets').doc(user?.uid).get();
-    if (petDoc.exists) {
-      setState(() {
-        petName = petDoc['name'] ?? "No pet name";
-        petSize = petDoc['size'] ?? "Unknown size";
-        petWeight = petDoc['weight'] ?? "Unknown weight";
-        petPhotoUrl = petDoc['photoUrl'] ?? "assets/icons/default_pet.png";
-      });
-    }
+    userId = user!.uid;
+    // Stream to listen to user document
+    userStream = FirebaseFirestore.instance.collection('users').doc(userId).snapshots();
   }
 
   @override
@@ -56,113 +36,133 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          const DrawerScreen(), // Drawer behind
+          const DrawerScreen(), // Hidden drawer screen
           AnimatedContainer(
-            transform: Matrix4.translationValues(xOffset, yOffset, 0)
-              ..scale(scaleFactor),
+            transform: Matrix4.translationValues(xOffset, yOffset, 0)..scale(scaleFactor),
             duration: const Duration(milliseconds: 250),
             decoration: BoxDecoration(
               color: AppColors.background,
-              borderRadius:
-                  isDrawerOpen ? BorderRadius.circular(30) : BorderRadius.zero,
+              borderRadius: isDrawerOpen ? BorderRadius.circular(30) : BorderRadius.zero,
             ),
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  // Top Bar
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        GestureDetector(
-                          onTap: toggleDrawer,
-                          child: Icon(
-                            isDrawerOpen ? Icons.arrow_back_ios : Icons.menu,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                        Text(
-                          'Hi, $nickname', // Display nickname here
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.add_circle_outline,
-                              color: AppColors.textPrimary),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => const PetProfile()),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  // Pet Info Card Section (Dynamically Loaded)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: SizedBox(
-                      height: 220,
-                      child: PageView(
-                        controller: PageController(viewportFraction: 0.8),
-                        children: [
-                          _buildPetCard(
-                            name: petName,
-                            size: petSize,
-                            weight: petWeight,
-                            photoUrl: petPhotoUrl,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Symptom Detection Button
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: ElevatedButton(
-                      onPressed: () {},
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        padding: const EdgeInsets.symmetric(vertical: 18),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
+            child: SafeArea(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          Icon(Icons.pets, color: Colors.white),
-                          SizedBox(width: 8),
-                          Text(
-                            "Symptom Detection",
-                            style: TextStyle(color: Colors.white, fontSize: 16),
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          GestureDetector(
+                            onTap: toggleDrawer,
+                            child: Icon(
+                              isDrawerOpen ? Icons.arrow_back_ios : Icons.menu,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          // Fetch the user's nickname and display it
+                          StreamBuilder<DocumentSnapshot>(
+                            stream: userStream,
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState == ConnectionState.waiting) {
+                                return Center(child: CircularProgressIndicator());
+                              }
+
+                              if (snapshot.hasError) {
+                                return Text('Error: ${snapshot.error}');
+                              }
+
+                              if (!snapshot.hasData || snapshot.data == null) {
+                                return Text('Error: No data found');
+                              }
+
+                              // Get the nickname from Firestore
+                              var userData = snapshot.data!;
+                              String userNickname = userData['name'] ?? 'Guest';
+
+                              return Text(
+                                'Hi, $userNickname',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textPrimary,
+                                ),
+                              );
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.add_circle_outline, color: AppColors.textPrimary),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => PetProfileScreen()),
+                              );
+                            },
                           ),
                         ],
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 10),
 
-                  const SizedBox(height: 20),
+                    // Pet Info Section (Dynamically Loaded from Firestore)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: SizedBox(
+                        height: 220,
+                        child: PageView(
+                          controller: PageController(viewportFraction: 0.8),
+                          children: [
+                            _buildPetCard(
+                              name: 'Alex',
+                              size: '2 y/o',
+                              weight: '2.5kg',
+                              photoUrl: 'assets/icons/avatar.png',
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
 
-                  // Upcoming Events
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: _buildEventSection(),
-                  ),
-                ],
+                    // Symptom Detection Button
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => SymptomDetection()),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Icon(Icons.pets, color: Colors.white),
+                            SizedBox(width: 8),
+                            Text(
+                              "Symptom Detection",
+                              style: TextStyle(color: Colors.white, fontSize: 16),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Upcoming Events
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: _buildEventSection(),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -207,9 +207,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(name,
-                      style:
-                          const TextStyle(color: Colors.white, fontSize: 16)),
+                  Text(name, style: const TextStyle(color: Colors.white, fontSize: 16)),
                   const SizedBox(height: 4),
                   Text(size, style: const TextStyle(color: Colors.white)),
                   const SizedBox(height: 4),
@@ -219,8 +217,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const Spacer(),
               CircleAvatar(
                 radius: 40,
-                backgroundImage:
-                    NetworkImage(photoUrl), // Display the pet photo dynamically
+                backgroundImage: AssetImage(photoUrl),
               ),
             ],
           ),
@@ -239,33 +236,25 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Tabs
           Row(
             children: const [
-              Text('Upcoming',
-                  style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold)),
+              Text('Upcoming', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               SizedBox(width: 20),
               Text('Past', style: TextStyle(color: Colors.white54)),
             ],
           ),
           const SizedBox(height: 20),
-
-          // Event Cards
-          _buildEventCard(
-              Icons.medication, "Medicine name", "Today | 10:00 AM"),
+          _buildEventCard(Icons.medication, "Medicine name", "Today | 10:00 AM"),
           const SizedBox(height: 12),
           _buildEventCard(Icons.event_note, "Event name", "Today | 10:00 AM"),
-
           const SizedBox(height: 12),
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
               onPressed: () {},
-              child:
-                  const Text('See More', style: TextStyle(color: Colors.white)),
+              child: const Text('See More', style: TextStyle(color: Colors.white)),
             ),
-          )
+          ),
         ],
       ),
     );
@@ -285,14 +274,11 @@ class _HomeScreenState extends State<HomeScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title,
-                  style: const TextStyle(
-                      color: Colors.black, fontWeight: FontWeight.bold)),
+              Text(title, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
-              Text(time,
-                  style: const TextStyle(color: Colors.black54, fontSize: 12)),
+              Text(time, style: const TextStyle(color: Colors.black54, fontSize: 12)),
             ],
-          )
+          ),
         ],
       ),
     );

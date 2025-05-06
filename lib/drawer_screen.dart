@@ -25,7 +25,7 @@ class _DrawerScreenState extends State<DrawerScreen> {
       body: SafeArea(
         child: Drawer(
           child: Container(
-            color: AppColors.background,
+            color: AppColors.primary,
             child: ListView(
               children: <Widget>[
                 DrawerHeader(

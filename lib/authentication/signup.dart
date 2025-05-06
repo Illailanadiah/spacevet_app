@@ -30,6 +30,7 @@ class _SignupState extends State<Signup> {
     await FirebaseFirestore.instance.collection('users').doc(userCredential.user?.uid).set({
       'name': nickname.text,
       'email': email.text,
+      'password': password.text,
     });
     Get.snackbar("Success", "You have signed up successfully",
         backgroundColor: AppColors.primary,
