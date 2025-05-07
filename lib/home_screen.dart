@@ -1,9 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:local_auth/local_auth.dart';
 import 'package:spacevet_app/color.dart'; // Adjust your app color
 import 'package:spacevet_app/drawer_screen.dart';
-import 'package:spacevet_app/add_pet_screen.dart';
 import 'package:spacevet_app/push_notification.dart';
 import 'package:spacevet_app/symptom_detection_screen.dart'; // Import the pet profile screen
 
@@ -30,7 +31,36 @@ class _HomeScreenState extends State<HomeScreen> {
     userId = user!.uid;
     // Stream to listen to user document
     userStream = FirebaseFirestore.instance.collection('users').doc(userId).snapshots();
+    _authenticateWithBiometrics();
   }
+  
+   final LocalAuthentication auth = LocalAuthentication();
+
+  Future<void> _authenticateWithBiometrics() async {
+    bool isAvailable = await auth.canCheckBiometrics;
+    if (isAvailable) {
+      bool isAuthenticated = await auth.authenticate(
+        localizedReason: "Scan your fingerprint to continue",
+        options: const AuthenticationOptions(biometricOnly: true),
+      );
+
+      if (isAuthenticated) {
+        // Navigate to HomeScreen after successful authentication
+        Get.to(() => const HomeScreen());
+      } else {
+        // Handle failed authentication
+        Get.snackbar("Authentication Failed", "Please try again.",
+            backgroundColor: Colors.red, colorText: Colors.white);
+      }
+    } else {
+      // Biometric not available
+      Get.snackbar("Error", "Biometric authentication is not available.",
+          backgroundColor: Colors.red, colorText: Colors.white);
+    }
+  }
+
+  
+
 
   @override
   Widget build(BuildContext context) {

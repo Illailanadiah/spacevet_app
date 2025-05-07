@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:spacevet_app/add_pet_screen.dart';
 import 'package:spacevet_app/color.dart';
+import 'package:spacevet_app/settings.dart';
 import 'package:spacevet_app/wrapper.dart';
 
 class DrawerScreen extends StatefulWidget {
@@ -99,14 +100,27 @@ class _DrawerScreenState extends State<DrawerScreen> {
                 ),
                 ListTile(
                   leading:
+                      const Icon(Icons.notifications_active, color: AppColors.background),
+                  title: const Text('Notifications',
+                      style: TextStyle(color: AppColors.background)),
+                  onTap: () {
+                    // Navigate to Notifications
+                  },
+                ),
+                ListTile(
+                  leading:
                       const Icon(Icons.settings, color: AppColors.background),
                   title: const Text('Settings',
                       style: TextStyle(color: AppColors.background)),
                   onTap: () {
                     // Navigate to Settings
+                    Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => Setting()),
+                              );
                   },
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 50),
                 ListTile(
                   leading:
                       const Icon(Icons.logout, color: AppColors.background),

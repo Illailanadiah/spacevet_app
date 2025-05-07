@@ -2,7 +2,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:local_auth/local_auth.dart';
 import 'package:spacevet_app/authentication/forgot.dart';
 import 'package:spacevet_app/home_screen.dart';
 import 'package:spacevet_app/authentication/signup.dart';
@@ -47,34 +46,7 @@ class _LoginState extends State<Login> {
     }
   }
 
-  final LocalAuthentication auth = LocalAuthentication();
-
-  checkAuth() async {
-    final User? user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      print("User is not signed in. Please sign in first.");
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("Please sign in first.")));
-      return; // Don't proceed with biometric authentication if the user is not signed in
-    }
-
-    bool isAvailable = await auth.canCheckBiometrics;
-    if (isAvailable) {
-      bool result = await auth.authenticate(
-        localizedReason: "Scan your finger",
-        options: const AuthenticationOptions(biometricOnly: true),
-      );
-      if (result) {
-        Get.to(
-            HomeScreen()); // Proceed to HomeScreen after successful biometric authentication
-      } else {
-        print("Authentication failed");
-      }
-    } else {
-      print("Biometric authentication is not available");
-    }
-  }
-
+ 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -162,21 +134,7 @@ class _LoginState extends State<Login> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 20),
-                ElevatedButton.icon(
-                  onPressed: checkAuth,
-                  icon: const Icon(Icons.fingerprint),
-                  label: const Text("Login with Fingerprint"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: AppColors.background,
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    minimumSize: const Size.fromHeight(50),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                ),
+                
                 const SizedBox(height: 20),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
