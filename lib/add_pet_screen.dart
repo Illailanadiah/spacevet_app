@@ -6,6 +6,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:spacevet_app/color.dart';
 import 'package:spacevet_app/home_screen.dart';
 
 class PetProfileScreen extends StatefulWidget {
@@ -69,6 +70,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text("Pet Profile"),
       ),
@@ -88,7 +90,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                       : const AssetImage('assets/icons/default_avatar.png')
                           as ImageProvider,
                   child: _petImage == null
-                      ? const Icon(Icons.camera_alt, color: Colors.white)
+                      ? const Icon(Icons.camera_alt, color: AppColors.textSecondary)
                       : null,
                 ),
               ),

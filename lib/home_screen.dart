@@ -1,9 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:local_auth/local_auth.dart';
-import 'package:spacevet_app/color.dart'; // Adjust your app color
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:spacevet_app/color.dart';
 import 'package:spacevet_app/drawer_screen.dart';
 import 'package:spacevet_app/push_notification.dart';
 import 'package:spacevet_app/symptom_detection_screen.dart'; // Import the pet profile screen
@@ -25,19 +25,22 @@ class _HomeScreenState extends State<HomeScreen> {
   late String userId;
   late Stream<DocumentSnapshot> userStream;
 
+  final LocalAuthentication auth = LocalAuthentication();  // Initialize LocalAuthentication
+
   @override
   void initState() {
     super.initState();
     userId = user!.uid;
-    // Stream to listen to user document
     userStream = FirebaseFirestore.instance.collection('users').doc(userId).snapshots();
+
+    // Call the function to authenticate with biometrics
     _authenticateWithBiometrics();
   }
-  
-   final LocalAuthentication auth = LocalAuthentication();
 
+  // Function to authenticate user using biometric fingerprint
   Future<void> _authenticateWithBiometrics() async {
     bool isAvailable = await auth.canCheckBiometrics;
+
     if (isAvailable) {
       bool isAuthenticated = await auth.authenticate(
         localizedReason: "Scan your fingerprint to continue",
@@ -45,22 +48,21 @@ class _HomeScreenState extends State<HomeScreen> {
       );
 
       if (isAuthenticated) {
-        // Navigate to HomeScreen after successful authentication
-        Get.to(() => const HomeScreen());
+        // Authentication succeeded, proceed to the home screen
+        Get.snackbar("Authentication Success", "You are authenticated.",
+            backgroundColor: Colors.green, colorText: Colors.white);
       } else {
-        // Handle failed authentication
+        // Authentication failed
         Get.snackbar("Authentication Failed", "Please try again.",
             backgroundColor: Colors.red, colorText: Colors.white);
+        // Optionally, handle failed authentication, e.g., logout or retry.
       }
     } else {
-      // Biometric not available
+      // Biometric not available on the device
       Get.snackbar("Error", "Biometric authentication is not available.",
           backgroundColor: Colors.red, colorText: Colors.white);
     }
   }
-
-  
-
 
   @override
   Widget build(BuildContext context) {
@@ -126,7 +128,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             onPressed: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => const PushNotification()),
+                                MaterialPageRoute(builder: (_) => PushNotification()),
                               );
                             },
                           ),
