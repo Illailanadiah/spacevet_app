@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/route_manager.dart';
 import 'package:slide_to_act/slide_to_act.dart';
-import 'package:spacevet_app/pet_profile_screen.dart'; // Assuming the pet profile screen is located here
+import 'package:spacevet_app/add_pet_screen.dart'; // Assuming the pet profile screen is located here
 import 'package:spacevet_app/color.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -100,7 +100,7 @@ class NoPetScreen extends StatelessWidget {
                       color: AppColors.background,
                       fontSize: 16,
                     ),
-                    onSubmit: () => Get.to(PetProfileScreen()),
+                    onSubmit: () => Get.to(PetProfileScreen(petId: '',)),
                   ),
                 ],
               );

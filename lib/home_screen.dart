@@ -3,8 +3,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:spacevet_app/color.dart'; // Adjust your app color
 import 'package:spacevet_app/drawer_screen.dart';
-import 'package:spacevet_app/pet_profile_screen.dart';
-import 'package:spacevet_app/symptom_detection_screen.dart'; // Import your hidden drawer
+import 'package:spacevet_app/add_pet_screen.dart';
+import 'package:spacevet_app/push_notification.dart';
+import 'package:spacevet_app/symptom_detection_screen.dart'; // Import the pet profile screen
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -65,7 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             stream: userStream,
                             builder: (context, snapshot) {
                               if (snapshot.connectionState == ConnectionState.waiting) {
-                                return Center(child: CircularProgressIndicator());
+                                return const Center(child: CircularProgressIndicator());
                               }
 
                               if (snapshot.hasError) {
@@ -73,7 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               }
 
                               if (!snapshot.hasData || snapshot.data == null) {
-                                return Text('Error: No data found');
+                                return const Text('Error: No data found');
                               }
 
                               // Get the nickname from Firestore
@@ -91,11 +92,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             },
                           ),
                           IconButton(
-                            icon: const Icon(Icons.add_circle_outline, color: AppColors.textPrimary),
+                            icon: const Icon(Icons.notifications_active_outlined, color: AppColors.textPrimary),
                             onPressed: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => PetProfileScreen()),
+                                MaterialPageRoute(builder: (_) => const PushNotification()),
                               );
                             },
                           ),
@@ -109,16 +110,38 @@ class _HomeScreenState extends State<HomeScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: SizedBox(
                         height: 220,
-                        child: PageView(
-                          controller: PageController(viewportFraction: 0.8),
-                          children: [
-                            _buildPetCard(
-                              name: 'Alex',
-                              size: '2 y/o',
-                              weight: '2.5kg',
-                              photoUrl: 'assets/icons/avatar.png',
-                            ),
-                          ],
+                        child: StreamBuilder<QuerySnapshot>(
+                          stream: FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(userId)
+                              .collection('pets')
+                              .snapshots(),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return const Center(child: CircularProgressIndicator());
+                            }
+
+                            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                              return const Center(child: Text('No pets yet, add a profile!'));
+                            }
+
+                            final pets = snapshot.data!.docs;
+
+                            return PageView.builder(
+                              controller: PageController(viewportFraction: 0.8),
+                              itemCount: pets.length,
+                              itemBuilder: (context, index) {
+                                final pet = pets[index];
+                                return _buildPetCard(
+                                  name: pet['name'],
+                                  age: pet['age'],
+                                  gender: pet['gender'],
+                                  weight: pet['weight'],
+                                  photoUrl: pet['avatarUrl'],
+                                );
+                              },
+                            );
+                          },
                         ),
                       ),
                     ),
@@ -131,7 +154,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => SymptomDetection()),
+                            MaterialPageRoute(builder: (_) =>  SymptomDetection()),
                           );
                         },
                         style: ElevatedButton.styleFrom(
@@ -189,8 +212,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildPetCard({
     required String name,
-    required String size,
-    required String weight,
+    required int age,
+    required String gender,
+    required double weight,
     required String photoUrl,
   }) {
     return Container(
@@ -209,15 +233,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Text(name, style: const TextStyle(color: Colors.white, fontSize: 16)),
                   const SizedBox(height: 4),
-                  Text(size, style: const TextStyle(color: Colors.white)),
+                  Text('$age y/o', style: const TextStyle(color: Colors.white)),
                   const SizedBox(height: 4),
-                  Text(weight, style: const TextStyle(color: Colors.white)),
+                  Text(gender, style: const TextStyle(color: Colors.white)),
+                  const SizedBox(height: 4),
+                  Text('${weight.toStringAsFixed(2)} kg', style: const TextStyle(color: Colors.white)),
                 ],
               ),
               const Spacer(),
               CircleAvatar(
                 radius: 40,
-                backgroundImage: AssetImage(photoUrl),
+                backgroundImage: NetworkImage(photoUrl),
               ),
             ],
           ),

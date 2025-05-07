@@ -9,7 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:spacevet_app/home_screen.dart';
 
 class PetProfileScreen extends StatefulWidget {
-  const PetProfileScreen({super.key});
+  const PetProfileScreen({super.key, required String petId});
 
   @override
   _PetProfileScreenState createState() => _PetProfileScreenState();
@@ -168,7 +168,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                       });
                     },
                   ),
-                  Text('${_petWeight.toStringAsFixed(1)} kg',
+                  Text('${_petWeight.toStringAsFixed(2)} kg',
                       style: const TextStyle(fontSize: 14)),
                 ],
               ),
