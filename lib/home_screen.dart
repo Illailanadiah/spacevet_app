@@ -64,6 +64,18 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  String getGreeting() {
+    final int hour = DateTime.now().hour; // Get the current hour
+
+    if (hour < 12) {
+      return "Good Morning!";
+    } else if (hour < 18) {
+      return "Good Afternoon!";
+    } else {
+      return "Good Evening!";
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -116,7 +128,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               return Text(
                                 'Hi, $userNickname',
                                 style: const TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 20,
                                   fontWeight: FontWeight.bold,
                                   color: AppColors.textPrimary,
                                 ),
@@ -135,45 +147,61 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 10),
-
+                    const SizedBox(height: 3),
+                    // Welcome Text
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Text(
+                        getGreeting(),
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
                     // Pet Info Section (Dynamically Loaded from Firestore)
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: SizedBox(
-                        height: 220,
-                        child: StreamBuilder<QuerySnapshot>(
-                          stream: FirebaseFirestore.instance
-                              .collection('users')
-                              .doc(userId)
-                              .collection('pets')
-                              .snapshots(),
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState == ConnectionState.waiting) {
-                              return const Center(child: CircularProgressIndicator());
-                            }
-
-                            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                              return const Center(child: Text('No pets yet, add a profile!'));
-                            }
-
-                            final pets = snapshot.data!.docs;
-
-                            return PageView.builder(
-                              controller: PageController(viewportFraction: 0.8),
-                              itemCount: pets.length,
-                              itemBuilder: (context, index) {
-                                final pet = pets[index];
-                                return _buildPetCard(
-                                  name: pet['name'],
-                                  age: pet['age'],
-                                  gender: pet['gender'],
-                                  weight: pet['weight'],
-                                  photoUrl: pet['avatarUrl'],
-                                );
-                              },
-                            );
-                          },
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        
+                        child: SizedBox(
+                          height: 220,
+                          child: StreamBuilder<QuerySnapshot>(
+                            stream: FirebaseFirestore.instance
+                                .collection('users')
+                                .doc(userId)
+                                .collection('pets')
+                                .snapshots(),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState == ConnectionState.waiting) {
+                                return const Center(child: CircularProgressIndicator());
+                              }
+                        
+                              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                                return const Center(child: Text('No pets yet, add a profile!'));
+                              }
+                        
+                              final pets = snapshot.data!.docs;
+                        
+                              return PageView.builder(
+                                controller: PageController(viewportFraction: 0.8),
+                                itemCount: pets.length,
+                                itemBuilder: (context, index) {
+                                  final pet = pets[index];
+                                  return _buildPetCard(
+                                    name: pet['name'],
+                                    age: pet['age'],
+                                    gender: pet['gender'],
+                                    weight: pet['weight'],
+                                    photoUrl: pet['avatarUrl'],
+                                  );
+                                },
+                              );
+                            },
+                          ),
                         ),
                       ),
                     ),

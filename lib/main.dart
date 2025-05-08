@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:spacevet_app/firebase_options.dart';
 import 'package:spacevet_app/wrapper.dart';
-//import 'package:spacevet_app/wrapper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
