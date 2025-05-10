@@ -1,12 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
 import 'package:local_auth/local_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:spacevet_app/color.dart';
 import 'package:spacevet_app/drawer_screen.dart';
+import 'package:spacevet_app/symptom_detection_screen.dart';
 import 'package:spacevet_app/push_notification.dart';
-import 'package:spacevet_app/symptom_detection_screen.dart'; // Import the pet profile screen
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -25,7 +25,8 @@ class _HomeScreenState extends State<HomeScreen> {
   late String userId;
   late Stream<DocumentSnapshot> userStream;
 
-  final LocalAuthentication auth = LocalAuthentication();  // Initialize LocalAuthentication
+  final LocalAuthentication auth = LocalAuthentication();
+
 
   @override
   void initState() {
@@ -75,6 +76,9 @@ class _HomeScreenState extends State<HomeScreen> {
       return "Good Evening!";
     }
   }
+
+  // List of pages for the navigation
+
 
   @override
   Widget build(BuildContext context) {
@@ -136,7 +140,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             },
                           ),
                           IconButton(
-                            icon: const Icon(Icons.notifications_active_outlined, color: AppColors.textPrimary),
+                            icon: const Icon(
+                                Icons.notifications_active_outlined,
+                                color: AppColors.textPrimary),
                             onPressed: () {
                               Navigator.push(
                                 context,
@@ -166,7 +172,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: Padding(
                         padding: const EdgeInsets.all(8.0),
-                        
                         child: SizedBox(
                           height: 220,
                           child: StreamBuilder<QuerySnapshot>(
@@ -179,13 +184,13 @@ class _HomeScreenState extends State<HomeScreen> {
                               if (snapshot.connectionState == ConnectionState.waiting) {
                                 return const Center(child: CircularProgressIndicator());
                               }
-                        
+
                               if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                                 return const Center(child: Text('No pets yet, add a profile!'));
                               }
-                        
+
                               final pets = snapshot.data!.docs;
-                        
+
                               return PageView.builder(
                                 controller: PageController(viewportFraction: 0.8),
                                 itemCount: pets.length,
@@ -214,7 +219,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) =>  SymptomDetection()),
+                            MaterialPageRoute(builder: (_) => const SymptomDetection()),
                           );
                         },
                         style: ElevatedButton.styleFrom(
@@ -251,6 +256,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+      
     );
   }
 
@@ -291,13 +297,15 @@ class _HomeScreenState extends State<HomeScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(name, style: const TextStyle(color: Colors.white, fontSize: 16)),
+                  Text(name,
+                      style: const TextStyle(color: Colors.white, fontSize: 16)),
                   const SizedBox(height: 4),
                   Text('$age y/o', style: const TextStyle(color: Colors.white)),
                   const SizedBox(height: 4),
                   Text(gender, style: const TextStyle(color: Colors.white)),
                   const SizedBox(height: 4),
-                  Text('${weight.toStringAsFixed(2)} kg', style: const TextStyle(color: Colors.white)),
+                  Text('${weight.toStringAsFixed(2)} kg',
+                      style: const TextStyle(color: Colors.white)),
                 ],
               ),
               const Spacer(),
@@ -324,7 +332,9 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Row(
             children: const [
-              Text('Upcoming', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              Text('Upcoming',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold)),
               SizedBox(width: 20),
               Text('Past', style: TextStyle(color: Colors.white54)),
             ],
@@ -360,9 +370,12 @@ class _HomeScreenState extends State<HomeScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+              Text(title,
+                  style: const TextStyle(
+                      color: Colors.black, fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
-              Text(time, style: const TextStyle(color: Colors.black54, fontSize: 12)),
+              Text(time,
+                  style: const TextStyle(color: Colors.black54, fontSize: 12)),
             ],
           ),
         ],
