@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:spacevet_app/color.dart';
-import 'package:spacevet_app/home_screen.dart';
+import 'package:spacevet_app/homescreen.dart';
 
 class PetProfileScreen extends StatefulWidget {
   const PetProfileScreen({super.key, required String petId});

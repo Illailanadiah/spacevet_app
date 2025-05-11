@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:get/get.dart';
-import 'package:spacevet_app/home_screen.dart';
+import 'package:spacevet_app/homescreen.dart';
 
 class Biometric extends StatefulWidget {
   const Biometric({super.key});
@@ -24,7 +24,7 @@ class _BiometricState extends State<Biometric> {
 
       if (isAuthenticated) {
         // Navigate to HomeScreen after successful authentication
-        Get.to(() => const HomeScreen());
+        Get.to(() => HomeScreen());
       } else {
         // Handle failed authentication
         Get.snackbar("Authentication Failed", "Please try again.",
@@ -51,7 +51,9 @@ class _BiometricState extends State<Biometric> {
         child: ElevatedButton(
           onPressed: _authenticateWithBiometrics,
           child: const Text("Authenticate with Fingerprint"),
+
         ),
+      
       ),
     );
   }

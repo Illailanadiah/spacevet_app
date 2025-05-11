@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:spacevet_app/firebase_options.dart';
+import 'package:spacevet_app/wrapper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,7 +20,7 @@ class MyApp extends StatelessWidget {
       title: 'SpaceVet',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(),
-      home: BottomAppBar(),
+      home: Wrapper(),
     );
   }
 }

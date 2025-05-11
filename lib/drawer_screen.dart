@@ -2,9 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:spacevet_app/add_pet_screen.dart';
+import 'package:spacevet_app/pets/add_pet_screen.dart';
 import 'package:spacevet_app/color.dart';
-import 'package:spacevet_app/settings.dart';
+import 'package:spacevet_app/settings/setting_screen.dart';
 import 'package:spacevet_app/wrapper.dart';
 
 class DrawerScreen extends StatefulWidget {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:spacevet_app/biometric.dart';
+import 'package:spacevet_app/settings/biometric.dart'; // Assuming the Biometric setup page
 
 class Setting extends StatefulWidget {
   const Setting({super.key});
@@ -32,6 +32,23 @@ class _SettingState extends State<Setting> {
     await prefs.setBool('biometric_enabled', value);
   }
 
+  // Function to start biometric authentication setup
+  Future<void> _startBiometricSetup() async {
+    // If biometric is enabled, directly ask the user to authenticate with their fingerprint
+    if (_isBiometricEnabled) {
+      // Here we can prompt the biometric authentication
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const Biometric()), // Replace Biometric() with the actual biometric setup screen
+      );
+    } else {
+      // Optionally show a message if biometric is not enabled
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Biometric Authentication is not enabled.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -40,6 +57,7 @@ class _SettingState extends State<Setting> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
+            // The switch to toggle biometric authentication on/off
             SwitchListTile(
               title: const Text('Enable Biometric Authentication'),
               value: _isBiometricEnabled,
@@ -48,20 +66,14 @@ class _SettingState extends State<Setting> {
                   _isBiometricEnabled = value;
                   _saveBiometricPreference(value); // Save the preference
                 });
-              },
-            ),
-            ElevatedButton(
-              onPressed: () {
+
+                // If biometric is enabled, trigger the biometric setup directly
                 if (_isBiometricEnabled) {
-                  // Navigate to the screen where the user can set up biometric authentication (if required)
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) =>  Biometric()),
-                  );
+                  _startBiometricSetup(); // Initiate biometric setup when toggled on
                 }
               },
-              child: const Text('Setup Biometric Authentication'),
             ),
+            // Removed the setup button as the setup will be triggered via the switch toggle
           ],
         ),
       ),

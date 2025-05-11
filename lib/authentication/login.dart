@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:spacevet_app/authentication/forgot.dart';
-import 'package:spacevet_app/home_screen.dart';
 import 'package:spacevet_app/authentication/signup.dart';
 import 'package:spacevet_app/color.dart';
+import 'package:spacevet_app/homescreen.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
