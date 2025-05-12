@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:spacevet_app/authentication/login.dart'; // Import the Login screen
 import 'package:spacevet_app/settings/biometric.dart'; // Assuming the Biometric setup page
 
 class Setting extends StatefulWidget {
@@ -34,19 +36,27 @@ class _SettingState extends State<Setting> {
 
   // Function to start biometric authentication setup
   Future<void> _startBiometricSetup() async {
-    // If biometric is enabled, directly ask the user to authenticate with their fingerprint
     if (_isBiometricEnabled) {
-      // Here we can prompt the biometric authentication
+      // If biometric is enabled, ask the user to authenticate with their fingerprint
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const Biometric()), // Replace Biometric() with the actual biometric setup screen
       );
     } else {
-      // Optionally show a message if biometric is not enabled
+      // Show a message if biometric is not enabled
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Biometric Authentication is not enabled.')),
       );
     }
+  }
+
+  // Function to handle logout using Get.to(Login()) for navigation
+  Future<void> _logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear(); // Clear all the stored preferences
+
+    // Navigate to the Login screen using Get.to()
+    Get.to(() => const Login()); // Use Get.to() to navigate to the Login screen
   }
 
   @override
@@ -73,7 +83,11 @@ class _SettingState extends State<Setting> {
                 }
               },
             ),
-            // Removed the setup button as the setup will be triggered via the switch toggle
+            const SizedBox(height: 20.0),
+            ElevatedButton(
+              onPressed: _logout, // Call _logout method on button press
+              child: const Text('Logout'),
+            ),
           ],
         ),
       ),

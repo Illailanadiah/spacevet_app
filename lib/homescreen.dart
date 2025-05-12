@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:spacevet_app/color.dart';
+import 'package:spacevet_app/pets/pet_profile_view.dart';
 import 'package:spacevet_app/push_notification.dart';
 import 'package:spacevet_app/bottomnav_bar.dart'; // Import BottomnavBar
 
@@ -184,24 +185,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
+  
               ),
               const SizedBox(height: 20),
-              // Symptom Detection Button
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child:  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(Icons.pets, color: Colors.white),
-                      SizedBox(width: 8),
-                      Text(
-                        "Symptom Detection",
-                        style: TextStyle(color: Colors.white, fontSize: 16),
-                      ),
-                    ],
-                  ),
-                ),
-              const SizedBox(height: 20),
+          
               // Upcoming Events
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -230,38 +217,53 @@ class _HomeScreenState extends State<HomeScreen> {
     required double weight,
     required String photoUrl,
   }) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 10),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(name,
-                      style: const TextStyle(color: Colors.white, fontSize: 16)),
-                  const SizedBox(height: 4),
-                  Text('$age y/o', style: const TextStyle(color: Colors.white)),
-                  const SizedBox(height: 4),
-                  Text(gender, style: const TextStyle(color: Colors.white)),
-                  const SizedBox(height: 4),
-                  Text('${weight.toStringAsFixed(2)} kg', style: const TextStyle(color: Colors.white)),
-                ],
-              ),
-              const Spacer(),
-              CircleAvatar(
-                radius: 40,
-                backgroundImage: NetworkImage(photoUrl),
-              ),
-            ],
+    return GestureDetector(
+      onTap: () {
+        // Navigate to PetProfileScreen
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PetProfileView(), // Pass the petId or photoUrl
           ),
-        ],
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 10),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.primary,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name,
+                        style: const TextStyle(color: Colors.white, fontSize: 16)),
+                    const SizedBox(height: 4),
+                    Text('$age y/o', style: const TextStyle(color: Colors.white)),
+                    const SizedBox(height: 4),
+                    Text(gender, style: const TextStyle(color: Colors.white)),
+                    const SizedBox(height: 4),
+                    Text('${weight.toStringAsFixed(2)} kg', style: const TextStyle(color: Colors.white)),
+                    
+                  ],
+                  
+                ),
+                
+                const Spacer(),
+                CircleAvatar(
+                  radius: 40,
+                  backgroundImage: NetworkImage(photoUrl),
+                ),
+                 
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

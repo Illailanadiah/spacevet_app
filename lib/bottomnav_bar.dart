@@ -22,14 +22,14 @@ class BottomnavBar extends StatelessWidget {
     return CurvedNavigationBar(
       index: currentIndex,
       height: 60.0,
-      color: AppColors.background,
+      color: Colors.transparent,
       buttonBackgroundColor: AppColors.primary,
       backgroundColor: Colors.transparent,
       items: const <Widget>[
         Icon(Icons.home, size: 30), // Navigate to HomeScreen
-        Icon(Icons.pets, size: 30),
+        Icon(Icons.camera, size: 30),
         Icon(Icons.pets_rounded,size: 30), // Navigate to PetProfileScreen
-        Icon(Icons.settings, size: 30),
+        Icon(Icons.person, size: 30),
          // Navigate to Setting screen
       ],
       animationCurve: Curves.easeInOut,
