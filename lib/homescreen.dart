@@ -4,9 +4,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:spacevet_app/color.dart';
-import 'package:spacevet_app/pets/pet_profile_view.dart';
 import 'package:spacevet_app/push_notification.dart';
-import 'package:spacevet_app/bottomnav_bar.dart'; // Import BottomnavBar
+import 'package:spacevet_app/pets/pet_profile_view.dart'; // Ensure this is correct
+import 'package:spacevet_app/bottomnav_bar.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -29,12 +29,25 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     userId = user!.uid;
     userStream = FirebaseFirestore.instance.collection('users').doc(userId).snapshots();
-
-    // Call the function to authenticate with biometrics
-    _authenticateWithBiometrics();
+    _loadBiometricPreference(); // Load the biometric preference
   }
 
-  
+  // Retrieve biometric preference when user logs in
+  Future<void> _loadBiometricPreference() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId != null) {
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      if (userDoc.exists) {
+        setState(() {
+          isBiometricEnabled = userDoc['biometric_enabled'] ?? false; // Default to false if not found
+        });
+        // Authenticate with biometrics if enabled
+        if (isBiometricEnabled) {
+          _authenticateWithBiometrics(); // Trigger biometric authentication
+        }
+      }
+    }
+  }
 
   // Function to authenticate user using biometric fingerprint
   Future<void> _authenticateWithBiometrics() async {
@@ -54,10 +67,9 @@ class _HomeScreenState extends State<HomeScreen> {
         // Authentication failed
         Get.snackbar("Authentication Failed", "Please try again.",
             backgroundColor: Colors.red, colorText: Colors.white);
-        // Optionally, handle failed authentication, e.g., logout or retry.
       }
     } else {
-      // Biometric not available on the device
+      // Biometric not available
       Get.snackbar("Error", "Biometric authentication is not available.",
           backgroundColor: Colors.red, colorText: Colors.white);
     }
@@ -188,10 +200,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
-  
               ),
               const SizedBox(height: 20),
-          
               // Upcoming Events
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -254,15 +264,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     Text('${weight.toStringAsFixed(2)} kg', style: const TextStyle(color: Colors.white)),
                     
                   ],
-                  
                 ),
-                
                 const Spacer(),
                 CircleAvatar(
                   radius: 40,
                   backgroundImage: NetworkImage(photoUrl),
                 ),
-                 
               ],
             ),
           ],

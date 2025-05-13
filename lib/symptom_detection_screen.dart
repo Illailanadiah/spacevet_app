@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:spacevet_app/bottomnav_bar.dart';
+import 'package:spacevet_app/color.dart';
 
 class SymptomDetection extends StatefulWidget {
   const SymptomDetection({super.key});
@@ -8,12 +10,14 @@ class SymptomDetection extends StatefulWidget {
 }
 
 class _SymptomDetectionState extends State<SymptomDetection> {
+  int currentIndex = 1; // Set the initial index for the bottom navigation bar
   @override
   Widget build(BuildContext context) {
     return Scaffold( 
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Symptom Detection'),
-        backgroundColor: Colors.blue,
+        backgroundColor: AppColors.primary,
       ),
       body: SafeArea(
         child: Center(
@@ -34,6 +38,15 @@ class _SymptomDetectionState extends State<SymptomDetection> {
             ],
           ),
         ),
+      ),
+      bottomNavigationBar: BottomnavBar(  // Add the BottomnavBar
+        currentIndex: currentIndex,  // Set the current index for the bottom nav bar
+        onTap: (index) {
+          setState(() {
+            currentIndex = index;  // Update the selected tab index
+            // Handle navigation based on index
+          });
+        },
       ),
     );
   }

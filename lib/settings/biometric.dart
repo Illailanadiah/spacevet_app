@@ -48,10 +48,14 @@ class _BiometricState extends State<Biometric> {
     return Scaffold(
       appBar: AppBar(title: const Text("Biometric Authentication")),
       body: Center(
-        child: ElevatedButton(
-          onPressed: _authenticateWithBiometrics,
-          child: const Text("Authenticate with Fingerprint"),
-
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              "Biometric Authentication",
+              style: TextStyle(fontSize: 24),
+            ),
+          ],
         ),
       
       ),

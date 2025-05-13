@@ -1,7 +1,11 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spacevet_app/authentication/login.dart'; // Import the Login screen
+import 'package:spacevet_app/bottomnav_bar.dart';
+import 'package:spacevet_app/color.dart';
 import 'package:spacevet_app/settings/biometric.dart'; // Assuming the Biometric setup page
 
 class Setting extends StatefulWidget {
@@ -13,6 +17,9 @@ class Setting extends StatefulWidget {
 
 class _SettingState extends State<Setting> {
   bool _isBiometricEnabled = false;
+  final User? user = FirebaseAuth.instance.currentUser;
+    int currentIndex = 3; // Track the selected index for bottom navigation
+
 
   @override
   void initState() {
@@ -20,30 +27,37 @@ class _SettingState extends State<Setting> {
     _loadBiometricPreference();
   }
 
-  // Load the biometric preference from SharedPreferences
+  // Load the biometric preference from Firestore
   Future<void> _loadBiometricPreference() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _isBiometricEnabled = prefs.getBool('biometric_enabled') ?? false;
-    });
+    if (user != null) {
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(user!.uid).get();
+      setState(() {
+        _isBiometricEnabled = userDoc['biometric_enabled'] ?? false;
+      });
+    }
   }
 
-  // Save the biometric preference to SharedPreferences
+
+  // Save the biometric preference to Firestore
   Future<void> _saveBiometricPreference(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('biometric_enabled', value);
+    if (user != null) {
+      FirebaseFirestore.instance.collection('users').doc(user!.uid).update({
+        'biometric_enabled': value,
+      });
+    }
   }
 
   // Function to start biometric authentication setup
   Future<void> _startBiometricSetup() async {
+    // If biometric is enabled, directly ask the user to authenticate with their fingerprint
     if (_isBiometricEnabled) {
-      // If biometric is enabled, ask the user to authenticate with their fingerprint
+      // Here we can prompt the biometric authentication
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const Biometric()), // Replace Biometric() with the actual biometric setup screen
       );
     } else {
-      // Show a message if biometric is not enabled
+      // Optionally show a message if biometric is not enabled
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Biometric Authentication is not enabled.')),
       );
@@ -59,12 +73,17 @@ class _SettingState extends State<Setting> {
     Get.to(() => const Login()); // Use Get.to() to navigate to the Login screen
   }
 
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(
+        title: const Text('Settings'),
+        backgroundColor: AppColors.background,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
+        
         child: Column(
           children: [
             // The switch to toggle biometric authentication on/off
@@ -74,7 +93,7 @@ class _SettingState extends State<Setting> {
               onChanged: (value) {
                 setState(() {
                   _isBiometricEnabled = value;
-                  _saveBiometricPreference(value); // Save the preference
+                  _saveBiometricPreference(value); // Save the preference to Firestore
                 });
 
                 // If biometric is enabled, trigger the biometric setup directly
@@ -83,14 +102,30 @@ class _SettingState extends State<Setting> {
                 }
               },
             ),
+            //remove the setup button as the setup will be triggered by the switch toggle 
+            ElevatedButton(
+              onPressed: _startBiometricSetup,
+             child: const Text('Setup Biometric Authentication'),
+            ),
+
+  
             const SizedBox(height: 20.0),
             ListTile(
-              leading: const Icon(Icons.logout),
+              leading: const Icon(Icons.logout, color: AppColors.textSecondary),
               onTap: _logout, // Call _logout method on button press
-              title: const Text('Logout'),
+              title: const Text('Logout', style: TextStyle(color: AppColors.textSecondary)),
             ),
           ],
         ),
+      ),
+      bottomNavigationBar: BottomnavBar(  // Add the BottomnavBar
+        currentIndex: currentIndex,  // Set the current index for the bottom nav bar
+        onTap: (index) {
+          setState(() {
+            currentIndex = index;  // Update the selected tab index
+            // Handle navigation based on index
+          });
+        },
       ),
     );
   }

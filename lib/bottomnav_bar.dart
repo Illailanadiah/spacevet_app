@@ -26,10 +26,10 @@ class BottomnavBar extends StatelessWidget {
       buttonBackgroundColor: AppColors.primary,
       backgroundColor: Colors.transparent,
       items: const <Widget>[
-        Icon(Icons.home, size: 30), // Navigate to HomeScreen
-        Icon(Icons.camera, size: 30),
-        Icon(Icons.pets_rounded,size: 30), // Navigate to PetProfileScreen
-        Icon(Icons.person, size: 30),
+        Icon(Icons.home, size: 30, color: AppColors.textSecondary), // Navigate to HomeScreen
+        Icon(Icons.camera, size: 30, color: AppColors.textSecondary),
+        Icon(Icons.pets_rounded,size: 30, color: AppColors.textSecondary), // Navigate to PetProfileScreen
+        Icon(Icons.person, size: 30, color: AppColors.textSecondary),
          // Navigate to Setting screen
       ],
       animationCurve: Curves.easeInOut,

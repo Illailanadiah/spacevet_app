@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_navigation/get_navigation.dart';
+import 'package:spacevet_app/bottomnav_bar.dart';
 import 'package:spacevet_app/pets/add_pet_screen.dart';
 
 class PetProfileView extends StatefulWidget {
@@ -11,6 +12,7 @@ class PetProfileView extends StatefulWidget {
 }
 
 class _PetProfileViewState extends State<PetProfileView> {
+  int currentIndex = 2; // Set the initial index for the bottom navigation bar
   @override
   Widget build(BuildContext context) {
     return  Scaffold(
@@ -45,6 +47,15 @@ class _PetProfileViewState extends State<PetProfileView> {
             ],
           ),
         ),
+      ),
+      bottomNavigationBar: BottomnavBar(  // Add the BottomnavBar
+        currentIndex: currentIndex,  // Set the current index for the bottom nav bar
+        onTap: (index) {
+          setState(() {
+            currentIndex = index;  // Update the selected tab index
+            // Handle navigation based on index
+          });
+        },
       ),
     );
   }

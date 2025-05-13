@@ -29,22 +29,34 @@ class _LoginState extends State<Login> {
   }
 
   googleSignIn() async {
-    try {
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-      final GoogleSignInAuthentication? googleAuth =
-          await googleUser?.authentication;
-
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth?.accessToken,
-        idToken: googleAuth?.idToken,
-      );
-
-      await FirebaseAuth.instance.signInWithCredential(credential);
-      Get.to(HomeScreen()); // Navigate to HomeScreen after Google login
-    } catch (e) {
-      print("Error: $e");
+  try {
+    // Trigger the Google Sign-In process
+    final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+    if (googleUser == null) {
+      // User cancelled the sign-in
+      return;
     }
+
+    // Retrieve authentication details
+    final GoogleSignInAuthentication? googleAuth = await googleUser.authentication;
+    
+    // Create a credential to use with Firebase
+    final credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth?.accessToken,
+      idToken: googleAuth?.idToken,
+    );
+
+    // Sign in with Firebase using the credential
+    await FirebaseAuth.instance.signInWithCredential(credential);
+    
+    // Navigate to HomeScreen after successful login
+    Get.offAll(() => const HomeScreen()); // Use Get.offAll to remove the login screen from the stack
+
+  } catch (e) {
+    print("Error during Google sign-in: $e");
+    // Handle error appropriately, maybe show a Snackbar or Alert
   }
+}
 
  
   @override
