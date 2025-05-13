@@ -4,9 +4,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:spacevet_app/color.dart';
-import 'package:spacevet_app/push_notification.dart';
 import 'package:spacevet_app/pets/pet_profile_view.dart'; // Ensure this is correct
 import 'package:spacevet_app/bottomnav_bar.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -51,6 +51,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Function to authenticate user using biometric fingerprint
   Future<void> _authenticateWithBiometrics() async {
+    final prefs = await SharedPreferences.getInstance();
+    bool hasAuthenticated = prefs.getBool('biometric_authenticated') ?? false;
+
+    if (hasAuthenticated) return; // Skip authentication if already completed
+
     bool isAvailable = await auth.canCheckBiometrics;
 
     if (isAvailable) {
@@ -63,6 +68,9 @@ class _HomeScreenState extends State<HomeScreen> {
         // Authentication succeeded, proceed to the home screen
         Get.snackbar("Authentication Success", "You are authenticated.",
             backgroundColor: Colors.green, colorText: Colors.white);
+
+        // Save the flag that biometric authentication has been completed
+        prefs.setBool('biometric_authenticated', true);
       } else {
         // Authentication failed
         Get.snackbar("Authentication Failed", "Please try again.",
@@ -135,10 +143,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: AppColors.textPrimary,
                       ),
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => PushNotification()),
-                        );
+                        
+                        
                       },
                     ),
                   ],

@@ -5,9 +5,17 @@ import 'package:slide_to_act/slide_to_act.dart';
 import 'package:spacevet_app/pets/add_pet_screen.dart'; // Assuming the pet profile screen is located here
 import 'package:spacevet_app/color.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:local_auth/local_auth.dart';
 
-class NoPetScreen extends StatelessWidget {
+class NoPetScreen extends StatefulWidget {
   const NoPetScreen({super.key});
+
+  @override
+  State<NoPetScreen> createState() => _NoPetScreenState();
+}
+
+class _NoPetScreenState extends State<NoPetScreen> {
+  final LocalAuthentication auth = LocalAuthentication();
 
   @override
   Widget build(BuildContext context) {
@@ -100,7 +108,35 @@ class NoPetScreen extends StatelessWidget {
                       color: AppColors.background,
                       fontSize: 16,
                     ),
-                    onSubmit: () => Get.to(PetProfileScreen(petId: '',)),
+                    onSubmit: () async {
+                      // Check if biometric is enabled
+                      bool isAvailable = await auth.canCheckBiometrics;
+                      if (isAvailable) {
+                        // Perform biometric authentication
+                        bool isAuthenticated = await auth.authenticate(
+                          localizedReason: "Scan your fingerprint to continue",
+                          options: const AuthenticationOptions(biometricOnly: true),
+                        );
+
+                        if (isAuthenticated) {
+                          // Authentication succeeded, save preference in Firestore
+                          await userDoc.update({
+                            'biometric_enabled': true, // Save biometric preference
+                          });
+                          Get.to(PetProfileScreen(petId: ''));
+                        } else {
+                          // Handle failed authentication
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Authentication Failed")),
+                          );
+                        }
+                      } else {
+                        // Biometric not available
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Biometric authentication is not available.")),
+                        );
+                      }
+                    },
                   ),
                 ],
               );
