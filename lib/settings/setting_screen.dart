@@ -84,9 +84,10 @@ class _SettingState extends State<Setting> {
               },
             ),
             const SizedBox(height: 20.0),
-            ElevatedButton(
-              onPressed: _logout, // Call _logout method on button press
-              child: const Text('Logout'),
+            ListTile(
+              leading: const Icon(Icons.logout),
+              onTap: _logout, // Call _logout method on button press
+              title: const Text('Logout'),
             ),
           ],
         ),

@@ -22,6 +22,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final LocalAuthentication auth = LocalAuthentication();
   int currentIndex = 0; // Track the selected index for bottom navigation
+  bool isBiometricEnabled = false;
 
   @override
   void initState() {
@@ -32,6 +33,8 @@ class _HomeScreenState extends State<HomeScreen> {
     // Call the function to authenticate with biometrics
     _authenticateWithBiometrics();
   }
+
+  
 
   // Function to authenticate user using biometric fingerprint
   Future<void> _authenticateWithBiometrics() async {
