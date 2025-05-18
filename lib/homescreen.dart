@@ -3,10 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
 import 'package:local_auth/local_auth.dart';
-import 'package:spacevet_app/color.dart';
-import 'package:spacevet_app/pets/pet_profile_view.dart'; // Ensure this is correct
-import 'package:spacevet_app/bottomnav_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:spacevet_app/color.dart';
+import 'package:spacevet_app/pets/pet_profile_view.dart';
+import 'package:spacevet_app/bottomnav_bar.dart';
+import 'package:spacevet_app/reminder.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,199 +17,153 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final LocalAuthentication _auth = LocalAuthentication();
   final user = FirebaseAuth.instance.currentUser;
   late String userId;
   late Stream<DocumentSnapshot> userStream;
 
-  final LocalAuthentication auth = LocalAuthentication();
-  int currentIndex = 0; // Track the selected index for bottom navigation
   bool isBiometricEnabled = false;
+  int currentIndex = 0;
+    bool _showUpcoming = true; 
 
   @override
   void initState() {
     super.initState();
     userId = user!.uid;
     userStream = FirebaseFirestore.instance.collection('users').doc(userId).snapshots();
-    _loadBiometricPreference(); // Load the biometric preference
+    _loadAndMaybeAuthenticate();
   }
 
-  // Retrieve biometric preference when user logs in
-  Future<void> _loadBiometricPreference() async {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId != null) {
-      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
-      if (userDoc.exists) {
-        setState(() {
-          isBiometricEnabled = userDoc['biometric_enabled'] ?? false; // Default to false if not found
-        });
-        // Authenticate with biometrics if enabled
-        if (isBiometricEnabled) {
-          _authenticateWithBiometrics(); // Trigger biometric authentication
-        }
-      }
+  /// 1) Load the user's preference from Firestore
+  /// 2) If enabled, run biometric auth once per app launch
+  Future<void> _loadAndMaybeAuthenticate() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // A) Check if we've already done the biometric check this session
+    final alreadyDone = prefs.getBool('biometric_authenticated') ?? false;
+    if (alreadyDone) return;
+
+    // B) Load their preference flag from Firestore
+    final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+    if (doc.exists && (doc.data()?['biometric_enabled'] ?? false) == true) {
+      setState(() => isBiometricEnabled = true);
+      await _authenticateWithBiometrics();
     }
   }
 
-  // Function to authenticate user using biometric fingerprint
   Future<void> _authenticateWithBiometrics() async {
     final prefs = await SharedPreferences.getInstance();
-    bool hasAuthenticated = prefs.getBool('biometric_authenticated') ?? false;
+    final canCheck = await _auth.canCheckBiometrics;
+    if (!canCheck) {
+      Get.snackbar("Error", "Biometric not available", backgroundColor: Colors.red, colorText: Colors.white);
+      return;
+    }
 
-    if (hasAuthenticated) return; // Skip authentication if already completed
+    final didAuth = await _auth.authenticate(
+      localizedReason: "Scan your fingerprint to continue",
+      options: const AuthenticationOptions(biometricOnly: true),
+    );
 
-    bool isAvailable = await auth.canCheckBiometrics;
-
-    if (isAvailable) {
-      bool isAuthenticated = await auth.authenticate(
-        localizedReason: "Scan your fingerprint to continue",
-        options: const AuthenticationOptions(biometricOnly: true),
-      );
-
-      if (isAuthenticated) {
-        // Authentication succeeded, proceed to the home screen
-        Get.snackbar("Authentication Success", "You are authenticated.",
-            backgroundColor: Colors.green, colorText: Colors.white);
-
-        // Save the flag that biometric authentication has been completed
-        prefs.setBool('biometric_authenticated', true);
-      } else {
-        // Authentication failed
-        Get.snackbar("Authentication Failed", "Please try again.",
-            backgroundColor: Colors.red, colorText: Colors.white);
-      }
+    if (didAuth) {
+      await prefs.setBool('biometric_authenticated', true);
+      Get.snackbar("Success", "Authenticated!", backgroundColor: Colors.green, colorText: Colors.white);
     } else {
-      // Biometric not available
-      Get.snackbar("Error", "Biometric authentication is not available.",
-          backgroundColor: Colors.red, colorText: Colors.white);
+      Get.snackbar("Failed", "Fingerprint auth failed", backgroundColor: Colors.red, colorText: Colors.white);
     }
   }
 
   String getGreeting() {
-    final int hour = DateTime.now().hour; // Get the current hour
-
-    if (hour < 12) {
-      return "Good Morning!";
-    } else if (hour < 18) {
-      return "Good Afternoon!";
-    } else {
-      return "Good Evening!";
-    }
+    final hour = DateTime.now().hour;
+    if (hour < 12) return "Good Morning!";
+    if (hour < 18) return "Good Afternoon!";
+    return "Good Evening!";
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.card,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
             children: [
+              // --- Header Row ---
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Fetch the user's nickname and display it
                     StreamBuilder<DocumentSnapshot>(
                       stream: userStream,
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(child: CircularProgressIndicator());
+                      builder: (ctx, snap) {
+                        if (snap.connectionState == ConnectionState.waiting) {
+                          return const CircularProgressIndicator();
                         }
-
-                        if (snapshot.hasError) {
-                          return Text('Error: ${snapshot.error}');
-                        }
-
-                        if (!snapshot.hasData || snapshot.data == null) {
-                          return const Text('Error: No data found');
-                        }
-
-                        // Get the nickname from Firestore
-                        var userData = snapshot.data!;
-                        String userNickname = userData['name'] ?? 'Guest';
-
+                        final name = snap.data?['name'] as String? ?? 'Guest';
                         return Text(
-                          'Hi, $userNickname',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
-                          ),
+                          'Hi, $name',
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                         );
                       },
                     ),
                     IconButton(
-                      icon: const Icon(
-                        Icons.notifications_active_outlined,
-                        color: AppColors.textPrimary,
-                      ),
-                      onPressed: () {
-                        
-                        
-                      },
+                      icon: const Icon(Icons.notifications_active_outlined, color: AppColors.textPrimary),
+                      onPressed: () {/* your notification screen */},
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 3),
-              // Welcome Text
+
+              // --- Greeting ---
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Text(
                   getGreeting(),
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                 ),
               ),
               const SizedBox(height: 20),
-              // Pet Info Section (Dynamically Loaded from Firestore)
+
+              // --- Pet Carousel ---
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: SizedBox(
-                    height: 220,
-                    child: StreamBuilder<QuerySnapshot>(
-                      stream: FirebaseFirestore.instance
-                          .collection('users')
-                          .doc(userId)
-                          .collection('pets')
-                          .snapshots(),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(child: CircularProgressIndicator());
-                        }
-
-                        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                          return const Center(child: Text('No pets yet, add a profile!'));
-                        }
-
-                        final pets = snapshot.data!.docs;
-
-                        return PageView.builder(
-                          controller: PageController(viewportFraction: 0.8),
-                          itemCount: pets.length,
-                          itemBuilder: (context, index) {
-                            final pet = pets[index];
-                            return _buildPetCard(
-                              name: pet['name'],
-                              age: pet['age'],
-                              gender: pet['gender'],
-                              weight: pet['weight'],
-                              photoUrl: pet['avatarUrl'],
-                            );
-                          },
-                        );
-                      },
-                    ),
+                child: SizedBox(
+                  height: 220,
+                  child: StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(userId)
+                        .collection('pets')
+                        .snapshots(),
+                    builder: (ctx, snap) {
+                      if (snap.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      final docs = snap.data?.docs ?? [];
+                      if (docs.isEmpty) {
+                        return const Center(child: Text('No pets yet, add a profile!'));
+                      }
+                      return PageView.builder(
+                        controller: PageController(viewportFraction: 0.8),
+                        itemCount: docs.length,
+                        itemBuilder: (ctx, i) {
+                          final pet = docs[i];
+                          return _buildPetCard(
+                            name: pet['name'],
+                            age: pet['age'],
+                            gender: pet['gender'],
+                            weight: pet['weight'],
+                            photoUrl: pet['avatarUrl'],
+                          );
+                        },
+                      );
+                    },
                   ),
                 ),
               ),
               const SizedBox(height: 20),
-              // Upcoming Events
+
+              // --- Event / Reminder Section ---
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: _buildEventSection(),
@@ -217,14 +172,11 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: BottomnavBar(  // Add the BottomnavBar
-        currentIndex: currentIndex,  // You can dynamically change the index based on the current tab
-        onTap: (index) {
-          setState(() {
-            currentIndex = index;  // Update the selected tab
-            // You can navigate to different screens based on the index if required
-          });
-        },
+
+      // --- Bottom Navigation ---
+      bottomNavigationBar: BottomnavBar(
+        currentIndex: currentIndex,
+        onTap: (idx) => setState(() => currentIndex = idx),
       ),
     );
   }
@@ -237,47 +189,21 @@ class _HomeScreenState extends State<HomeScreen> {
     required String photoUrl,
   }) {
     return GestureDetector(
-      onTap: () {
-        // Navigate to PetProfileScreen
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => PetProfileView(), // Pass the petId or photoUrl
-          ),
-        );
-      },
+      onTap: () => Get.to(() => const PetProfileView()),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 10),
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.primary,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Column(
+        decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(20)),
+        child: Row(
           children: [
-            Row(
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(name,
-                        style: const TextStyle(color: Colors.white, fontSize: 16)),
-                    const SizedBox(height: 4),
-                    Text('$age y/o', style: const TextStyle(color: Colors.white)),
-                    const SizedBox(height: 4),
-                    Text(gender, style: const TextStyle(color: Colors.white)),
-                    const SizedBox(height: 4),
-                    Text('${weight.toStringAsFixed(2)} kg', style: const TextStyle(color: Colors.white)),
-                    
-                  ],
-                ),
-                const Spacer(),
-                CircleAvatar(
-                  radius: 40,
-                  backgroundImage: NetworkImage(photoUrl),
-                ),
-              ],
-            ),
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(name, style: const TextStyle(color: Colors.white, fontSize: 16)),
+              Text('$age y/o', style: const TextStyle(color: Colors.white)),
+              Text(gender, style: const TextStyle(color: Colors.white)),
+              Text('${weight.toStringAsFixed(2)} kg', style: const TextStyle(color: Colors.white)),
+            ]),
+            const Spacer(),
+            CircleAvatar(radius: 40, backgroundImage: NetworkImage(photoUrl)),
           ],
         ),
       ),
@@ -285,62 +211,151 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildEventSection() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: const [
-              Text('Upcoming', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              SizedBox(width: 20),
-              Text('Past', style: TextStyle(color: Colors.white54)),
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+    final itemsRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('items')
+        .orderBy('timestamp', descending: false);
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: itemsRef.snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting)
+          return const Center(child: CircularProgressIndicator());
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty)
+          return const SizedBox(); // nothing to show
+
+        final now = DateTime.now();
+        // partition docs:
+        final upcomingDocs = <QueryDocumentSnapshot>[];
+        final pastDocs = <QueryDocumentSnapshot>[];
+
+        for (var doc in snapshot.data!.docs) {
+          final ts = (doc['timestamp'] as Timestamp).toDate();
+          if (ts.isAfter(now))
+            upcomingDocs.add(doc);
+          else
+            pastDocs.add(doc);
+        }
+
+        final displayDocs = _showUpcoming ? upcomingDocs : pastDocs;
+
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // TAB SELECTOR
+              Row(
+                children: [
+                  GestureDetector(
+                    onTap: () => setState(() => _showUpcoming = true),
+                    child: Text(
+                      'Upcoming',
+                      style: TextStyle(
+                        color: _showUpcoming ? Colors.white : Colors.white54,
+                        fontWeight: _showUpcoming ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 20),
+                  GestureDetector(
+                    onTap: () => setState(() => _showUpcoming = false),
+                    child: Text(
+                      'Past',
+                      style: TextStyle(
+                        color: !_showUpcoming ? Colors.white : Colors.white54,
+                        fontWeight: !_showUpcoming ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // LIST OF CARDS
+              if (displayDocs.isEmpty)
+                Text(
+                  _showUpcoming ? 'No upcoming items.' : 'No past items.',
+                  style: const TextStyle(color: Colors.white70),
+                )
+              else
+                ...displayDocs.map((doc) {
+                  final data = doc.data()! as Map<String, dynamic>;
+                  final title = data['title'] as String? ?? '';
+                  final ts = (data['timestamp'] as Timestamp).toDate();
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _buildEventCard(
+                      icon: data['category'] == 'reminder'
+                          ? Icons.medication
+                          : Icons.event_note,
+                      title: title,
+                      time: _formatTimestamp(ts),
+                      onTap: () {
+                        // e.g. navigate to edit screen
+                        Get.to(() => AddReminderScreen(existing: doc));
+                      },
+                    ),
+                  );
+                }).toList(),
+
+             
             ],
           ),
-          const SizedBox(height: 20),
-          _buildEventCard(Icons.medication, "Medicine name", "Today | 10:00 AM"),
-          const SizedBox(height: 12),
-          _buildEventCard(Icons.event_note, "Event name", "Today | 10:00 AM"),
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: () {},
-              child: const Text('See More', style: TextStyle(color: Colors.white)),
+        );
+      },
+    );
+  }
+
+  Widget _buildEventCard({
+    required IconData icon,
+    required String title,
+    required String time,
+    VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: AppColors.primary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style:
+                          const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text(time, style: const TextStyle(color: Colors.black54, fontSize: 12)),
+                ],
+              ),
             ),
-          ),
-        ],
+            const Icon(Icons.chevron_right, color: Colors.grey),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildEventCard(IconData icon, String title, String time) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: AppColors.primary),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title,
-                  style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4),
-              Text(time,
-                  style: const TextStyle(color: Colors.black54, fontSize: 12)),
-            ],
-          ),
-        ],
-      ),
-    );
+  String _formatTimestamp(DateTime dt) {
+    final now = DateTime.now();
+    final datePart = (dt.year == now.year && dt.month == now.month && dt.day == now.day)
+        ? 'Today'
+        : '${dt.month}/${dt.day}/${dt.year}';
+    final timePart = TimeOfDay.fromDateTime(dt).format(context);
+    return '$datePart | $timePart';
   }
 }

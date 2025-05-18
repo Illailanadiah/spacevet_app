@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:spacevet_app/color.dart';
 import 'package:spacevet_app/homescreen.dart';
 import 'package:spacevet_app/pets/pet_profile_view.dart';
+import 'package:spacevet_app/reminder.dart';
 import 'package:spacevet_app/settings/setting_screen.dart';
 import 'package:spacevet_app/symptom_detection_screen.dart';
 
@@ -27,7 +28,8 @@ class BottomnavBar extends StatelessWidget {
       backgroundColor: Colors.transparent,
       items: const <Widget>[
         Icon(Icons.home, size: 30, color: AppColors.textSecondary), // Navigate to HomeScreen
-        Icon(Icons.camera, size: 30, color: AppColors.textSecondary),
+        Icon(Icons.camera_enhance, size: 30, color: AppColors.textSecondary),
+        Icon(Icons.event, size: 30, color: AppColors.textSecondary), // Navigate to SymptomDetection
         Icon(Icons.pets_rounded,size: 30, color: AppColors.textSecondary), // Navigate to PetProfileScreen
         Icon(Icons.person, size: 30, color: AppColors.textSecondary),
          // Navigate to Setting screen
@@ -54,9 +56,13 @@ class BottomnavBar extends StatelessWidget {
         break;
       case 2:
         // Navigate to Settings screen
-        Get.to(() =>  PetProfileView());
+        Get.to(() =>  AddReminderScreen());
         break;
       case 3:
+        // Navigate to Settings screen
+        Get.to(() =>  PetProfileView());
+        break;
+      case 4:
         // Navigate to Settings screen
         Get.to(() =>  Setting());
         break;

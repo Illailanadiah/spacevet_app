@@ -18,7 +18,7 @@ class Setting extends StatefulWidget {
 class _SettingState extends State<Setting> {
   bool _isBiometricEnabled = false;
   final User? user = FirebaseAuth.instance.currentUser;
-    int currentIndex = 3; // Track the selected index for bottom navigation
+    int currentIndex = 4; // Track the selected index for bottom navigation
 
 
   @override
@@ -103,11 +103,7 @@ class _SettingState extends State<Setting> {
               },
             ),
             //remove the setup button as the setup will be triggered by the switch toggle 
-            ElevatedButton(
-              onPressed: _startBiometricSetup,
-             child: const Text('Setup Biometric Authentication'),
-            ),
-
+           
   
             const SizedBox(height: 20.0),
             ListTile(

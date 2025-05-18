@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:get/get.dart';
+import 'package:spacevet_app/color.dart';
 import 'package:spacevet_app/homescreen.dart';
 
 class Biometric extends StatefulWidget {
@@ -46,7 +47,15 @@ class _BiometricState extends State<Biometric> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Biometric Authentication")),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(title: const Text("Biometric Authentication"),
+      foregroundColor: AppColors.background,
+      backgroundColor: AppColors.primary,
+      centerTitle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
+      ),
+      ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

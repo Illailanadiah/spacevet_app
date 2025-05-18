@@ -7,7 +7,9 @@ import 'package:spacevet_app/wrapper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform,);
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   await FirebaseMsg().initFCM();
   runApp(const MyApp());
 }

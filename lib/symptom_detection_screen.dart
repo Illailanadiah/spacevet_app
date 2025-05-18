@@ -16,8 +16,13 @@ class _SymptomDetectionState extends State<SymptomDetection> {
     return Scaffold( 
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Symptom Detection'),
+        title: const Text('Symptom Detection', textAlign: TextAlign.center,),
         backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.background,
+         centerTitle: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
+        ),
       ),
       body: SafeArea(
         child: Center(
@@ -25,7 +30,7 @@ class _SymptomDetectionState extends State<SymptomDetection> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Text(
-                'Symptom Detection Screen',
+                'Add a photo of your pet',
                 style: TextStyle(fontSize: 24),
               ),
               const SizedBox(height: 20),
@@ -33,7 +38,14 @@ class _SymptomDetectionState extends State<SymptomDetection> {
                 onPressed: () {
                   // Add your symptom detection logic here
                 },
-                child: const Text('Detect Symptoms'),
+                child: const Icon(Icons.camera_alt),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  // Add your symptom detection logic here
+                },
+                child: const Text('Take from photo'),
               ),
             ],
           ),

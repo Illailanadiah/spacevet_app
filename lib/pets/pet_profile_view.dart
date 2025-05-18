@@ -12,7 +12,7 @@ class PetProfileView extends StatefulWidget {
 }
 
 class _PetProfileViewState extends State<PetProfileView> {
-  int currentIndex = 2; // Set the initial index for the bottom navigation bar
+  int currentIndex = 3; // Set the initial index for the bottom navigation bar
   @override
   Widget build(BuildContext context) {
     return  Scaffold(
