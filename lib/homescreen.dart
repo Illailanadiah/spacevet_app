@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spacevet_app/color.dart';
+import 'package:spacevet_app/notifications.dart';
 import 'package:spacevet_app/pets/pet_profile_view.dart';
 import 'package:spacevet_app/bottomnav_bar.dart';
 import 'package:spacevet_app/reminder.dart';
@@ -24,13 +25,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   bool isBiometricEnabled = false;
   int currentIndex = 0;
-    bool _showUpcoming = true; 
+  bool _showUpcoming = true;
 
   @override
   void initState() {
     super.initState();
     userId = user!.uid;
-    userStream = FirebaseFirestore.instance.collection('users').doc(userId).snapshots();
+    userStream =
+        FirebaseFirestore.instance.collection('users').doc(userId).snapshots();
     _loadAndMaybeAuthenticate();
   }
 
@@ -44,7 +46,8 @@ class _HomeScreenState extends State<HomeScreen> {
     if (alreadyDone) return;
 
     // B) Load their preference flag from Firestore
-    final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+    final doc =
+        await FirebaseFirestore.instance.collection('users').doc(userId).get();
     if (doc.exists && (doc.data()?['biometric_enabled'] ?? false) == true) {
       setState(() => isBiometricEnabled = true);
       await _authenticateWithBiometrics();
@@ -55,7 +58,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final prefs = await SharedPreferences.getInstance();
     final canCheck = await _auth.canCheckBiometrics;
     if (!canCheck) {
-      Get.snackbar("Error", "Biometric not available", backgroundColor: Colors.red, colorText: Colors.white);
+      Get.snackbar("Error", "Biometric not available",
+          backgroundColor: Colors.red, colorText: Colors.white);
       return;
     }
 
@@ -66,9 +70,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (didAuth) {
       await prefs.setBool('biometric_authenticated', true);
-      Get.snackbar("Success", "Authenticated!", backgroundColor: Colors.green, colorText: Colors.white);
+      Get.snackbar("Success", "Authenticated!",
+          backgroundColor: Colors.green, colorText: Colors.white);
     } else {
-      Get.snackbar("Failed", "Fingerprint auth failed", backgroundColor: Colors.red, colorText: Colors.white);
+      Get.snackbar("Failed", "Fingerprint auth failed",
+          backgroundColor: Colors.red, colorText: Colors.white);
     }
   }
 
@@ -82,14 +88,15 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.card,
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
             children: [
               // --- Header Row ---
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -101,15 +108,22 @@ class _HomeScreenState extends State<HomeScreen> {
                         }
                         final name = snap.data?['name'] as String? ?? 'Guest';
                         return Text(
-                          'Hi, $name',
-                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                          'Hi, $name !',
+                          style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary ),
+                              textAlign: TextAlign.center,
                         );
                       },
                     ),
                     IconButton(
-                      icon: const Icon(Icons.notifications_active_outlined, color: AppColors.textPrimary),
-                      onPressed: () {/* your notification screen */},
-                    ),
+                        icon: const Icon(Icons.notifications_active_outlined,
+                            color: AppColors.textPrimary),
+                        onPressed: () {
+                          Get.to(() => Notifications());
+                        }
+                        ),
                   ],
                 ),
               ),
@@ -119,7 +133,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Text(
                   getGreeting(),
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                  style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary),
                 ),
               ),
               const SizedBox(height: 20),
@@ -141,7 +158,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       }
                       final docs = snap.data?.docs ?? [];
                       if (docs.isEmpty) {
-                        return const Center(child: Text('No pets yet, add a profile!'));
+                        return const Center(
+                            child: Text('No pets yet, add a profile!'));
                       }
                       return PageView.builder(
                         controller: PageController(viewportFraction: 0.8),
@@ -193,19 +211,49 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 10),
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(20)),
+        decoration: BoxDecoration(
+            color: AppColors.primary, borderRadius: BorderRadius.circular(20)),
         child: Row(
           children: [
             Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(name, style: const TextStyle(color: Colors.white, fontSize: 16)),
-              Text('$age y/o', style: const TextStyle(color: Colors.white)),
-              Text(gender, style: const TextStyle(color: Colors.white)),
-              Text('${weight.toStringAsFixed(2)} kg', style: const TextStyle(color: Colors.white)),
+              Row(
+                children: [
+                  const Icon(Icons.pets,color: Colors.white, size: 16),
+                  Text(name,style: const TextStyle(color: Colors.white, fontSize: 16)),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  const Icon(Icons.cake, color: Colors.white, size: 16),
+                  const SizedBox(width: 4),
+                  Text('$age y/o', style: const TextStyle(color: Colors.white)),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  const Icon(Icons.male, color: Colors.white, size: 16),
+                  const SizedBox(width: 4),
+                  Text(gender, style: const TextStyle(color: Colors.white)),
+
+                ],
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  const Icon(Icons.monitor_weight, color: Colors.white, size: 16),
+                  const SizedBox(width: 4),
+              Text('${weight.toStringAsFixed(2)} kg',
+                  style: const TextStyle(color: Colors.white)),
             ]),
             const Spacer(),
             CircleAvatar(radius: 40, backgroundImage: NetworkImage(photoUrl)),
           ],
         ),
+          ],
+      
+    ),
       ),
     );
   }
@@ -259,7 +307,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       'Upcoming',
                       style: TextStyle(
                         color: _showUpcoming ? Colors.white : Colors.white54,
-                        fontWeight: _showUpcoming ? FontWeight.bold : FontWeight.normal,
+                        fontWeight:
+                            _showUpcoming ? FontWeight.bold : FontWeight.normal,
                       ),
                     ),
                   ),
@@ -270,7 +319,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       'Past',
                       style: TextStyle(
                         color: !_showUpcoming ? Colors.white : Colors.white54,
-                        fontWeight: !_showUpcoming ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: !_showUpcoming
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                       ),
                     ),
                   ),
@@ -304,8 +355,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   );
                 }).toList(),
-
-             
             ],
           ),
         );
@@ -336,10 +385,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(title,
-                      style:
-                          const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                      style: const TextStyle(
+                          color: Colors.black, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
-                  Text(time, style: const TextStyle(color: Colors.black54, fontSize: 12)),
+                  Text(time,
+                      style:
+                          const TextStyle(color: Colors.black54, fontSize: 12)),
                 ],
               ),
             ),
@@ -352,9 +403,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _formatTimestamp(DateTime dt) {
     final now = DateTime.now();
-    final datePart = (dt.year == now.year && dt.month == now.month && dt.day == now.day)
-        ? 'Today'
-        : '${dt.month}/${dt.day}/${dt.year}';
+    final datePart =
+        (dt.year == now.year && dt.month == now.month && dt.day == now.day)
+            ? 'Today'
+            : '${dt.month}/${dt.day}/${dt.year}';
     final timePart = TimeOfDay.fromDateTime(dt).format(context);
     return '$datePart | $timePart';
   }

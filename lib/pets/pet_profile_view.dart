@@ -53,14 +53,16 @@ class _PetProfileViewState extends State<PetProfileView> {
 
     return Scaffold(
       appBar: AppBar(title: const Text("Pet Profiles")),
-      body: PageView.builder(
-        controller: _pageController,
-        itemCount: _docs.length,
-        itemBuilder: (ctx, idx) {
-          final pet = _docs[idx].data()! as Map<String, dynamic>;
-          final petId = _docs[idx].id;
-          return _buildProfileCard(context, petId, pet);
-        },
+      body: SafeArea(
+        child: PageView.builder(
+          controller: _pageController,
+          itemCount: _docs.length,
+          itemBuilder: (ctx, idx) {
+            final pet = _docs[idx].data()! as Map<String, dynamic>;
+            final petId = _docs[idx].id;
+            return _buildProfileCard(context, petId, pet);
+          },
+        ),
       ),
     );
   }
@@ -72,99 +74,119 @@ class _PetProfileViewState extends State<PetProfileView> {
     final weight = pet['weight']  as num?    ?? 0.0;
     final avatar = pet['avatarUrl'] as String?;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-      child: Column(
-        children: [
-          // BLUE CARD with avatar + edit icon
-          Stack(
-            children: [
-              Container(
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+        child: Column(
+          children: [
+            // BLUE CARD with avatar + edit icon
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned(
+                  top: 200 - 32,
+                  left: 16,
+                  right: 16,
+                  child: Container(
+                    width: double.infinity,
+                    height: 200,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        // empty space to balance the avatar on the right
+                        const Spacer(),
+                        CircleAvatar(
+                          radius: 56,
+                          backgroundColor: Colors.white24,
+                          backgroundImage:
+                              avatar != null ? NetworkImage(avatar) : const AssetImage('assets/icons/default_avatar.png') as ImageProvider,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // edit button top‐right
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: IconButton(
+                    icon: const Icon(Icons.edit, color: Colors.white),
+                    onPressed: () {
+                      Get.to(() => PetProfileScreen(petId: petId));
+                    },
+                  ),
+                ),
+              ],
+            ),
+      
+            // White details panel overlapping
+            Transform.translate(
+              offset:const Offset (0, -32),
+              child: Container(
                 width: double.infinity,
                 height: 200,
                 decoration: BoxDecoration(
-                  color: AppColors.primary,
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
-                ),
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    // empty space to balance the avatar on the right
-                    const Spacer(),
-                    CircleAvatar(
-                      radius: 56,
-                      backgroundColor: Colors.white24,
-                      backgroundImage:
-                          avatar != null ? NetworkImage(avatar) : const AssetImage('assets/icons/default_avatar.png') as ImageProvider,
-                    ),
-                  ],
+                  boxShadow: [ BoxShadow(color: Colors.black12, blurRadius: 8) ],
                 ),
               ),
-              // edit button top‐right
-              Positioned(
-                top: 8,
-                right: 8,
-                child: IconButton(
-                  icon: const Icon(Icons.edit, color: Colors.white),
-                  onPressed: () {
-                    Get.to(() => PetProfileScreen(petId: petId));
-                  },
-                ),
+            ),
+            Container(
+              margin: const EdgeInsets.only(top: -32),
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [ BoxShadow(color: Colors.black12, blurRadius: 8) ],
               ),
-            ],
-          ),
-
-          // White details panel overlapping
-          Container(
-            margin: const EdgeInsets.only(top: -32),
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [ BoxShadow(color: Colors.black12, blurRadius: 8) ],
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _rowDetail("Name", name),
+                  const SizedBox(height: 12),
+                  _rowDetail("Age", "$age y/o"),
+                  const SizedBox(height: 12),
+                  _rowDetail("Gender", gender),
+                  const SizedBox(height: 12),
+                  _rowDetail("Weight", "${weight.toStringAsFixed(2)} kg"),
+                ],
+              ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _rowDetail("Name", name),
-                const SizedBox(height: 12),
-                _rowDetail("Age", "$age y/o"),
-                const SizedBox(height: 12),
-                _rowDetail("Gender", gender),
-                const SizedBox(height: 12),
-                _rowDetail("Weight", "${weight.toStringAsFixed(2)} kg"),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // delete profile
-          TextButton(
-            onPressed: () async {
-              await FirebaseFirestore.instance
-                .collection('users')
-                .doc(uid)
-                .collection('pets')
-                .doc(petId)
-                .delete();
-              Get.back(); // go back if you want
-            },
-            child: const Text("Delete Profile", style: TextStyle(color: Colors.red)),
-          ),
-
-          // add new profile button
-          Align(
-            alignment: Alignment.centerRight,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                Get.to(() => PetProfileScreen(petId: null));
+      
+            const SizedBox(height: 16),
+      
+            // delete profile
+            TextButton(
+              onPressed: () async {
+                await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(uid)
+                  .collection('pets')
+                  .doc(petId)
+                  .delete();
+                Get.back(); // go back if you want
               },
-              icon: const Icon(Icons.add),
-              label: const Text("Add Profile"),
+              child: const Text("Delete Profile", style: TextStyle(color: Colors.red)),
             ),
-          ),
-        ],
+      
+            // add new profile button
+            Align(
+              alignment: Alignment.centerRight,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Get.to(() => PetProfileScreen(petId: null));
+                },
+                icon: const Icon(Icons.add),
+                label: const Text("Add Profile"),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

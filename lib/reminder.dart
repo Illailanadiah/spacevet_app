@@ -192,7 +192,7 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
                     const SizedBox(height: 24),
                     // Food vs Pills icon
                     if (isReminder) ...[
-                      Text('Food & Pills', style: Theme.of(context).textTheme.titleMedium),
+                      Text('Medicine Intake', style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 8),
                       Row(
                         children: [
@@ -217,7 +217,7 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
                       leading: const Icon(Icons.notifications),
                       title: Text(notificationTime.format(context)),
                       trailing: IconButton(
-                        icon: const Icon(Icons.edit),
+                        icon: const Icon(Icons.add),
                         onPressed: _pickTime,
                       ),
                     ),
@@ -311,3 +311,4 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
     );
   }
 }
+

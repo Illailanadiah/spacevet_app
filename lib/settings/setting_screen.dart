@@ -77,9 +77,16 @@ class _SettingState extends State<Setting> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Settings'),
-        backgroundColor: AppColors.background,
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.background,
+        centerTitle: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
+        ),
+        
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

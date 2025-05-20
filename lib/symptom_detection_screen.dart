@@ -41,6 +41,7 @@ class _SymptomDetectionScreenState extends State<SymptomDetectionScreen> {
 
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Symptom Detection'),
         backgroundColor: AppColors.primary,
