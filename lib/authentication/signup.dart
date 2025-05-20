@@ -32,7 +32,9 @@ class _SignupState extends State<Signup> {
       'name': nickname.text,
       'email': email.text,
       'password': password.text,
-    });
+      'biometric_enabled': false,
+    },SetOptions(merge: true)
+    );
     Get.snackbar("Success", "You have signed up successfully",
         backgroundColor: AppColors.primary,
         colorText: AppColors.background,

@@ -108,34 +108,10 @@ class _NoPetScreenState extends State<NoPetScreen> {
                       color: AppColors.background,
                       fontSize: 16,
                     ),
-                    onSubmit: () async {
-                      // Check if biometric is enabled
-                      bool isAvailable = await auth.canCheckBiometrics;
-                      if (isAvailable) {
-                        // Perform biometric authentication
-                        bool isAuthenticated = await auth.authenticate(
-                          localizedReason: "Scan your fingerprint to continue",
-                          options: const AuthenticationOptions(biometricOnly: true),
-                        );
-
-                        if (isAuthenticated) {
-                          // Authentication succeeded, save preference in Firestore
-                          await userDoc.update({
-                            'biometric_enabled': true, // Save biometric preference
-                          });
-                          Get.to(PetProfileScreen(petId: ''));
-                        } else {
-                          // Handle failed authentication
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Authentication Failed")),
-                          );
-                        }
-                      } else {
-                        // Biometric not available
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Biometric authentication is not available.")),
-                        );
-                      }
+                    onSubmit: ()  {
+                      // Navigate to the add pet screen
+                      Get.to(() =>  PetProfileScreen());
+                      return null;
                     },
                   ),
                 ],

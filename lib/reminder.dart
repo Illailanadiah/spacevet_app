@@ -190,9 +190,8 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
                     ),
 
                     const SizedBox(height: 24),
-                    // Food vs Pills icon
                     if (isReminder) ...[
-                      Text('Medicine Intake', style: Theme.of(context).textTheme.titleMedium),
+                      Text('Take Medicine:', style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 8),
                       Row(
                         children: [

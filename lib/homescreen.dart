@@ -5,7 +5,7 @@ import 'package:get/get.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spacevet_app/color.dart';
-import 'package:spacevet_app/notifications.dart';
+import 'package:spacevet_app/push_notifications/notifications.dart';
 import 'package:spacevet_app/pets/pet_profile_view.dart';
 import 'package:spacevet_app/bottomnav_bar.dart';
 import 'package:spacevet_app/reminder.dart';
@@ -14,53 +14,64 @@ class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  _HomeScreenState createState() => _HomeScreenState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final LocalAuthentication _auth = LocalAuthentication();
-  final user = FirebaseAuth.instance.currentUser;
-  late String userId;
-  late Stream<DocumentSnapshot> userStream;
+  final _auth = LocalAuthentication();
+  final _user = FirebaseAuth.instance.currentUser!;
+  late final String _uid;
+  late final Stream<DocumentSnapshot> _userStream;
 
-  bool isBiometricEnabled = false;
-  int currentIndex = 0;
+  bool _isBiometricEnabled = false;
+  int _currentIndex = 0;
   bool _showUpcoming = true;
 
   @override
   void initState() {
     super.initState();
-    userId = user!.uid;
-    userStream =
-        FirebaseFirestore.instance.collection('users').doc(userId).snapshots();
-    _loadAndMaybeAuthenticate();
+    _uid = _user.uid;
+    _userStream = FirebaseFirestore.instance
+        .collection('users')
+        .doc(_uid)
+        .snapshots();
+    _initBiometricFlow();
   }
 
-  /// 1) Load the user's preference from Firestore
-  /// 2) If enabled, run biometric auth once per app launch
-  Future<void> _loadAndMaybeAuthenticate() async {
+  Future<void> _initBiometricFlow() async {
     final prefs = await SharedPreferences.getInstance();
+    // Already done once this session?
+    if (prefs.getBool('biometric_authenticated') ?? false) return;
 
-    // A) Check if we've already done the biometric check this session
-    final alreadyDone = prefs.getBool('biometric_authenticated') ?? false;
-    if (alreadyDone) return;
-
-    // B) Load their preference flag from Firestore
-    final doc =
-        await FirebaseFirestore.instance.collection('users').doc(userId).get();
-    if (doc.exists && (doc.data()?['biometric_enabled'] ?? false) == true) {
-      setState(() => isBiometricEnabled = true);
-      await _authenticateWithBiometrics();
+    // Read flag from Firestore (default = false)
+    final shouldAuth = await _readBiometricFlag();
+    if (shouldAuth) {
+      final didAuth = await _authenticateWithBiometrics();
+      if (didAuth) {
+        await prefs.setBool('biometric_authenticated', true);
+      }
+    } else {
+      // mark it done for this session so we don't keep asking
+      await prefs.setBool('biometric_authenticated', true);
     }
   }
 
-  Future<void> _authenticateWithBiometrics() async {
-    final prefs = await SharedPreferences.getInstance();
+  Future<bool> _readBiometricFlag() async {
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(_uid)
+        .get();
+    final data = doc.data() ?? {};
+    final enabled = data['biometric_enabled'];
+    return enabled is bool && enabled;
+  }
+
+  Future<bool> _authenticateWithBiometrics() async {
     final canCheck = await _auth.canCheckBiometrics;
     if (!canCheck) {
       Get.snackbar("Error", "Biometric not available",
           backgroundColor: Colors.red, colorText: Colors.white);
-      return;
+      return false;
     }
 
     final didAuth = await _auth.authenticate(
@@ -68,20 +79,21 @@ class _HomeScreenState extends State<HomeScreen> {
       options: const AuthenticationOptions(biometricOnly: true),
     );
 
-    if (didAuth) {
-      await prefs.setBool('biometric_authenticated', true);
-      Get.snackbar("Success", "Authenticated!",
-          backgroundColor: Colors.green, colorText: Colors.white);
-    } else {
-      Get.snackbar("Failed", "Fingerprint auth failed",
-          backgroundColor: Colors.red, colorText: Colors.white);
-    }
+    Get.snackbar(
+      didAuth ? "Success" : "Failed",
+      didAuth ? "Authenticated!" : "Fingerprint auth failed",
+      backgroundColor: didAuth ? Colors.green : Colors.red,
+      colorText: Colors.white,
+    );
+
+    if (didAuth) setState(() => _isBiometricEnabled = true);
+    return didAuth;
   }
 
-  String getGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return "Good Morning!";
-    if (hour < 18) return "Good Afternoon!";
+  String _greeting() {
+    final h = DateTime.now().hour;
+    if (h < 12) return "Good Morning!";
+    if (h < 18) return "Good Afternoon!";
     return "Good Evening!";
   }
 
@@ -93,7 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              // --- Header Row ---
+              // — Header Row —
               Padding(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -101,38 +113,38 @@ class _HomeScreenState extends State<HomeScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     StreamBuilder<DocumentSnapshot>(
-                      stream: userStream,
+                      stream: _userStream,
                       builder: (ctx, snap) {
-                        if (snap.connectionState == ConnectionState.waiting) {
+                        if (snap.connectionState == ConnectionState.waiting)
                           return const CircularProgressIndicator();
-                        }
-                        final name = snap.data?['name'] as String? ?? 'Guest';
+                        final data = snap.data?.data() as Map<String, dynamic>? ?? {};
+                        final name = data['name'] as String? ?? 'Guest';
                         return Text(
-                          'Hi, $name !',
+                          'Hi, $name!',
                           style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary ),
-                              textAlign: TextAlign.center,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
                         );
                       },
                     ),
                     IconButton(
-                        icon: const Icon(Icons.notifications_active_outlined,
-                            color: AppColors.textPrimary),
-                        onPressed: () {
-                          Get.to(() => Notifications());
-                        }
-                        ),
+                      icon: const Icon(
+                        Icons.notifications_active_outlined,
+                        color: AppColors.textPrimary,
+                      ),
+                      onPressed: () => Get.to(() => Notifications()),
+                    ),
                   ],
                 ),
               ),
 
-              // --- Greeting ---
+              // — Greeting —
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Text(
-                  getGreeting(),
+                  _greeting(),
                   style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -141,7 +153,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 20),
 
-              // --- Pet Carousel ---
+              // — Pet Carousel —
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: SizedBox(
@@ -149,30 +161,23 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: StreamBuilder<QuerySnapshot>(
                     stream: FirebaseFirestore.instance
                         .collection('users')
-                        .doc(userId)
+                        .doc(_uid)
                         .collection('pets')
                         .snapshots(),
                     builder: (ctx, snap) {
-                      if (snap.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
+                      if (snap.connectionState == ConnectionState.waiting)
+                        return const Center(
+                            child: CircularProgressIndicator());
                       final docs = snap.data?.docs ?? [];
-                      if (docs.isEmpty) {
+                      if (docs.isEmpty)
                         return const Center(
                             child: Text('No pets yet, add a profile!'));
-                      }
                       return PageView.builder(
                         controller: PageController(viewportFraction: 0.8),
                         itemCount: docs.length,
                         itemBuilder: (ctx, i) {
-                          final pet = docs[i];
-                          return _buildPetCard(
-                            name: pet['name'],
-                            age: pet['age'],
-                            gender: pet['gender'],
-                            weight: pet['weight'],
-                            photoUrl: pet['avatarUrl'],
-                          );
+                          final pet = docs[i].data()! as Map<String, dynamic>;
+                          return _petCard(pet);
                         },
                       );
                     },
@@ -181,113 +186,111 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 20),
 
-              // --- Event / Reminder Section ---
+              // — Event / Reminder Section —
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: _buildEventSection(),
+                child: _eventSection(),
               ),
             ],
           ),
         ),
       ),
 
-      // --- Bottom Navigation ---
+      // — Bottom Navigation Bar —
       bottomNavigationBar: BottomnavBar(
-        currentIndex: currentIndex,
-        onTap: (idx) => setState(() => currentIndex = idx),
+        currentIndex: _currentIndex,
+        onTap: (idx) => setState(() => _currentIndex = idx),
       ),
     );
   }
 
-  Widget _buildPetCard({
-    required String name,
-    required int age,
-    required String gender,
-    required double weight,
-    required String photoUrl,
-  }) {
+  Widget _petCard(Map<String, dynamic> pet) {
     return GestureDetector(
-      onTap: () => Get.to(() => PetProfileView(initialPetId: '')),
+      onTap: () {
+        Get.to(() => PetProfileView(initialPetId: '',));
+      },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 10),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-            color: AppColors.primary, borderRadius: BorderRadius.circular(20)),
+          color: AppColors.primary,
+          borderRadius: BorderRadius.circular(20),
+        ),
         child: Row(
           children: [
-            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(
-                children: [
-                  const Icon(Icons.pets,color: Colors.white, size: 16),
-                  Text(name,style: const TextStyle(color: Colors.white, fontSize: 16)),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  const Icon(Icons.cake, color: Colors.white, size: 16),
-                  const SizedBox(width: 4),
-                  Text('$age y/o', style: const TextStyle(color: Colors.white)),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  const Icon(Icons.male, color: Colors.white, size: 16),
-                  const SizedBox(width: 4),
-                  Text(gender, style: const TextStyle(color: Colors.white)),
-
-                ],
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  const Icon(Icons.monitor_weight, color: Colors.white, size: 16),
-                  const SizedBox(width: 4),
-              Text('${weight.toStringAsFixed(2)} kg',
-                  style: const TextStyle(color: Colors.white)),
-            ]),
-            const Spacer(),
-            CircleAvatar(radius: 40, backgroundImage: NetworkImage(photoUrl)),
+            Expanded(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(children: [
+                      const Icon(Icons.pets, color: Colors.white, size: 16),
+                      const SizedBox(width: 4),
+                      Text(pet['name'] as String,
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 16)),
+                    ]),
+                    const SizedBox(height: 4),
+                    Row(children: [
+                      const Icon(Icons.cake, color: Colors.white, size: 16),
+                      const SizedBox(width: 4),
+                      Text('${pet['age']} y/o',
+                          style: const TextStyle(color: Colors.white)),
+                    ]),
+                    const SizedBox(height: 4),
+                    Row(children: [
+                      const Icon(Icons.male, color: Colors.white, size: 16),
+                      const SizedBox(width: 4),
+                      Text(pet['gender'] as String,
+                          style: const TextStyle(color: Colors.white)),
+                    ]),
+                    const SizedBox(height: 4),
+                    Row(children: [
+                      const Icon(Icons.monitor_weight,
+                          color: Colors.white, size: 16),
+                      const SizedBox(width: 4),
+                      Text('${(pet['weight'] as num).toStringAsFixed(2)} kg',
+                          style: const TextStyle(color: Colors.white)),
+                    ]),
+                  ]),
+            ),
+            CircleAvatar(
+              radius: 40,
+              backgroundImage: NetworkImage(pet['avatarUrl'] as String),
+            ),
           ],
         ),
-          ],
-      
-    ),
       ),
     );
   }
 
-  Widget _buildEventSection() {
-    final uid = FirebaseAuth.instance.currentUser!.uid;
+  Widget _eventSection() {
     final itemsRef = FirebaseFirestore.instance
         .collection('users')
-        .doc(uid)
+        .doc(_uid)
         .collection('items')
-        .orderBy('timestamp', descending: false);
+        .orderBy('timestamp');
 
     return StreamBuilder<QuerySnapshot>(
       stream: itemsRef.snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting)
+      builder: (ctx, snap) {
+        if (snap.connectionState == ConnectionState.waiting)
           return const Center(child: CircularProgressIndicator());
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty)
-          return const SizedBox(); // nothing to show
+        final docs = snap.data?.docs ?? [];
+        if (docs.isEmpty) return const SizedBox();
 
         final now = DateTime.now();
-        // partition docs:
-        final upcomingDocs = <QueryDocumentSnapshot>[];
-        final pastDocs = <QueryDocumentSnapshot>[];
+        final upcoming = <QueryDocumentSnapshot>[];
+        final past = <QueryDocumentSnapshot>[];
 
-        for (var doc in snapshot.data!.docs) {
-          final ts = (doc['timestamp'] as Timestamp).toDate();
-          if (ts.isAfter(now))
-            upcomingDocs.add(doc);
+        for (var d in docs) {
+          final dt = (d['timestamp'] as Timestamp).toDate();
+          if (dt.isAfter(now))
+            upcoming.add(d);
           else
-            pastDocs.add(doc);
+            past.add(d);
         }
 
-        final displayDocs = _showUpcoming ? upcomingDocs : pastDocs;
+        final display = _showUpcoming ? upcoming : past;
 
         return Container(
           padding: const EdgeInsets.all(20),
@@ -298,63 +301,40 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // TAB SELECTOR
-              Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => setState(() => _showUpcoming = true),
-                    child: Text(
-                      'Upcoming',
-                      style: TextStyle(
-                        color: _showUpcoming ? Colors.white : Colors.white54,
-                        fontWeight:
-                            _showUpcoming ? FontWeight.bold : FontWeight.normal,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 20),
-                  GestureDetector(
-                    onTap: () => setState(() => _showUpcoming = false),
-                    child: Text(
-                      'Past',
-                      style: TextStyle(
-                        color: !_showUpcoming ? Colors.white : Colors.white54,
-                        fontWeight: !_showUpcoming
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              // Toggle
+              Row(children: [
+                _tabLabel("Upcoming", _showUpcoming, () {
+                  setState(() => _showUpcoming = true);
+                }),
+                const SizedBox(width: 20),
+                _tabLabel("Past", !_showUpcoming, () {
+                  setState(() => _showUpcoming = false);
+                }),
+              ]),
               const SizedBox(height: 20),
 
-              // LIST OF CARDS
-              if (displayDocs.isEmpty)
+              if (display.isEmpty)
                 Text(
-                  _showUpcoming ? 'No upcoming items.' : 'No past items.',
+                  _showUpcoming ? "No upcoming items." : "No past items.",
                   style: const TextStyle(color: Colors.white70),
                 )
               else
-                ...displayDocs.map((doc) {
-                  final data = doc.data()! as Map<String, dynamic>;
-                  final title = data['title'] as String? ?? '';
-                  final ts = (data['timestamp'] as Timestamp).toDate();
+                ...display.map((d) {
+                  final data = d.data()! as Map<String, dynamic>;
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 12),
-                    child: _buildEventCard(
+                    child: _eventCard(
                       icon: data['category'] == 'reminder'
                           ? Icons.medication
                           : Icons.event_note,
-                      title: title,
-                      time: _formatTimestamp(ts),
-                      onTap: () {
-                        // e.g. navigate to edit screen
-                        Get.to(() => AddReminderScreen(existing: doc));
-                      },
+                      title: data['title'] as String,
+                      time: _formatTimestamp(
+                          (data['timestamp'] as Timestamp).toDate()),
+                      onTap: () => Get.to(
+                          () => const AddReminderScreen() /*pass existing*/),
                     ),
                   );
-                }).toList(),
+                }),
             ],
           ),
         );
@@ -362,7 +342,20 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildEventCard({
+  Widget _tabLabel(String text, bool active, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Text(
+        text,
+        style: TextStyle(
+          color: active ? Colors.white : Colors.white54,
+          fontWeight: active ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
+    );
+  }
+
+  Widget _eventCard({
     required IconData icon,
     required String title,
     required String time,
@@ -376,38 +369,35 @@ class _HomeScreenState extends State<HomeScreen> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
         ),
-        child: Row(
-          children: [
-            Icon(icon, color: AppColors.primary),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title,
-                      style: const TextStyle(
-                          color: Colors.black, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  Text(time,
-                      style:
-                          const TextStyle(color: Colors.black54, fontSize: 12)),
-                ],
-              ),
+        child: Row(children: [
+          Icon(icon, color: AppColors.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: const TextStyle(
+                        color: Colors.black, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                Text(time,
+                    style: const TextStyle(
+                        color: Colors.black54, fontSize: 12)),
+              ],
             ),
-            const Icon(Icons.chevron_right, color: Colors.grey),
-          ],
-        ),
+          ),
+          const Icon(Icons.chevron_right, color: Colors.grey),
+        ]),
       ),
     );
   }
 
   String _formatTimestamp(DateTime dt) {
     final now = DateTime.now();
-    final datePart =
-        (dt.year == now.year && dt.month == now.month && dt.day == now.day)
-            ? 'Today'
-            : '${dt.month}/${dt.day}/${dt.year}';
-    final timePart = TimeOfDay.fromDateTime(dt).format(context);
-    return '$datePart | $timePart';
+    final date = (dt.year == now.year && dt.month == now.month && dt.day == now.day)
+        ? 'Today'
+        : '${dt.month}/${dt.day}/${dt.year}';
+    final time = TimeOfDay.fromDateTime(dt).format(context);
+    return '$date | $time';
   }
 }

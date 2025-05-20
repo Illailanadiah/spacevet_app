@@ -5,6 +5,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:spacevet_app/color.dart';
 
 class PetProfileScreen extends StatefulWidget {
   /// if petId is null → create new. Otherwise edit existing.
@@ -106,6 +107,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
   Widget build(BuildContext context) {
     final isNew = widget.petId == null;
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text(isNew ? "Add Pet" : "Edit Pet"),
         actions: [
@@ -115,6 +117,13 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
               onPressed: _delete,
             )
         ],
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.background,
+        centerTitle: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
+        ),
+        leading: BackButton(color: AppColors.background),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -161,6 +170,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                 min: 0, max: 15, divisions: 15, label: "$age",
                 value: age.toDouble(),
                 onChanged: (d) => setState(() => age = d.toInt()),
+                activeColor: AppColors.primary,
               ),
 
               const SizedBox(height: 16),
@@ -169,12 +179,21 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
                 min: 0.5, max: 30, divisions: 59, label: "${weight.toStringAsFixed(1)}",
                 value: weight,
                 onChanged: (d) => setState(() => weight = d),
+                activeColor: AppColors.primary,
               ),
 
               const SizedBox(height: 32),
               ElevatedButton(
                 onPressed: _save,
                 child: Text(isNew ? "Create Profile" : "Save Changes"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.background,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
               ),
             ],
           ),

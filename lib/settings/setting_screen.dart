@@ -29,13 +29,20 @@ class _SettingState extends State<Setting> {
 
   // Load the biometric preference from Firestore
   Future<void> _loadBiometricPreference() async {
-    if (user != null) {
-      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(user!.uid).get();
-      setState(() {
-        _isBiometricEnabled = userDoc['biometric_enabled'] ?? false;
-      });
-    }
-  }
+  if (user == null) return;
+
+  final doc = await FirebaseFirestore.instance
+      .collection('users')
+      .doc(user!.uid)
+      .get();
+
+  final data = doc.data() ?? {};
+  setState(() {
+    _isBiometricEnabled = (data['biometric_enabled'] is bool)
+      ? data['biometric_enabled'] as bool
+      : false;
+  });
+}
 
 
   // Save the biometric preference to Firestore
