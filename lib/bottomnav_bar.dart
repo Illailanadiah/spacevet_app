@@ -60,7 +60,7 @@ class BottomnavBar extends StatelessWidget {
         break;
       case 3:
         // Navigate to Settings screen
-        Get.to(() =>  PetProfileView());
+        Get.to(() =>  PetProfileView(initialPetId: '',));
         break;
       case 4:
         // Navigate to Settings screen

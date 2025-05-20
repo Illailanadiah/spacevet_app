@@ -22,7 +22,7 @@ class _LoginState extends State<Login> {
     try {
       await FirebaseAuth.instance.signInWithEmailAndPassword(
           email: email.text, password: password.text);
-      Get.to(HomeScreen()); // Navigate to HomeScreen after login
+      Get.to(() => HomeScreen()); // Navigate to HomeScreen after login
     } catch (e) {
       print("Error: $e");
     }
@@ -34,6 +34,7 @@ class _LoginState extends State<Login> {
     final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
     if (googleUser == null) {
       // User cancelled the sign-in
+
       return;
     }
 
@@ -157,7 +158,7 @@ class _LoginState extends State<Login> {
                           fontFamily: 'Poppins',
                         )),
                     TextButton(
-                      onPressed: () => Get.to(const Signup()),
+                      onPressed: () => Get.to(() => Signup()),
                       child: const Text(
                         "SignUp",
                         style: TextStyle(

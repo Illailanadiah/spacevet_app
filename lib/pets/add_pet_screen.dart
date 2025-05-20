@@ -1,213 +1,180 @@
 import 'dart:io';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:spacevet_app/color.dart';
-import 'package:spacevet_app/homescreen.dart';
 
 class PetProfileScreen extends StatefulWidget {
-  const PetProfileScreen({super.key, required String petId});
+  /// if petId is null → create new. Otherwise edit existing.
+  final String? petId;
+  const PetProfileScreen({Key? key, this.petId}) : super(key: key);
 
   @override
-  _PetProfileScreenState createState() => _PetProfileScreenState();
+  State<PetProfileScreen> createState() => _PetProfileScreenState();
 }
 
 class _PetProfileScreenState extends State<PetProfileScreen> {
-  final ImagePicker _picker = ImagePicker();
-  File? _petImage;
-  final TextEditingController _petNameController = TextEditingController();
-  String? _selectedGender = 'Male';
-  int _petAge = 1;
-  double _petWeight = 3.0;
+  final _formKey = GlobalKey<FormState>();
+  final picker = ImagePicker();
 
-  final List<String> _genders = ['Male', 'Female'];
-// 0-10 years
+  String? _avatarUrl;
+  File? _pickedImage;
+  final nameCtrl = TextEditingController();
+  String gender = "Male";
+  int age = 1;
+  double weight = 3.0;
 
-  // Function to pick an image from the gallery or camera
-  Future<void> _pickPetImage() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
-      setState(() {
-        _petImage = File(image.path);
+  final uid = FirebaseAuth.instance.currentUser!.uid;
+  late CollectionReference petsRef;
+
+  @override
+  void initState() {
+    super.initState();
+    petsRef = FirebaseFirestore.instance
+      .collection('users').doc(uid).collection('pets');
+
+    // if editing, fetch existing data
+    if (widget.petId != null) {
+      petsRef.doc(widget.petId).get().then((snap) {
+        final data = snap.data()! as Map<String, dynamic>;
+        setState(() {
+          nameCtrl.text = data['name'] ?? '';
+          gender      = data['gender'] ?? gender;
+          age         = data['age'] ?? age;
+          weight      = (data['weight'] as num?)?.toDouble() ?? weight;
+          _avatarUrl  = data['avatarUrl'];
+        });
       });
     }
   }
 
-  // Save pet data to Firestore
-  Future<void> _savePetProfile(String petName, String petGender, int petAge,
-      double petWeight, String petImageUrl) async {
-    FirebaseFirestore firestore = FirebaseFirestore.instance;
-
-    // Assuming you have a 'users' collection and pet data will be stored under user UID
-    await firestore
-        .collection('users')
-        .doc(FirebaseAuth.instance.currentUser?.uid)
-        .collection('pets')
-        .add({
-      'name': petName,
-      'gender': petGender,
-      'age': petAge,
-      'weight': petWeight,
-      'avatarUrl': petImageUrl,
-    });
+  Future<void> _pickImage() async {
+    final XFile? f = await picker.pickImage(source: ImageSource.gallery);
+    if (f != null) {
+      setState(() => _pickedImage = File(f.path));
+    }
   }
 
-  Future<String> _uploadImage(File image) async {
-    String fileName =
-        'pet_avatars/${DateTime.now().millisecondsSinceEpoch}.png';
-    FirebaseStorage storage = FirebaseStorage.instance;
-    Reference ref = storage.ref().child(fileName);
-    UploadTask uploadTask = ref.putFile(image);
-    TaskSnapshot snapshot = await uploadTask;
-    String downloadUrl = await snapshot.ref.getDownloadURL();
-    return downloadUrl;
+  Future<String> _uploadImage(File f) async {
+    final path = 'pet_avatars/$uid/${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final ref  = FirebaseStorage.instance.ref(path);
+    await ref.putFile(f);
+    return ref.getDownloadURL();
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    String finalUrl = _avatarUrl ?? "";
+    if (_pickedImage != null) {
+      finalUrl = await _uploadImage(_pickedImage!);
+    }
+
+    final payload = {
+      'name':       nameCtrl.text.trim(),
+      'gender':     gender,
+      'age':        age,
+      'weight':     weight,
+      'avatarUrl':  finalUrl,
+      'updatedAt':  FieldValue.serverTimestamp(),
+    };
+
+    if (widget.petId == null) {
+      // create new
+      await petsRef.add({
+        ...payload,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } else {
+      // update existing
+      await petsRef.doc(widget.petId).update(payload);
+    }
+
+    Get.back(); // return
+  }
+
+  Future<void> _delete() async {
+    if (widget.petId != null) {
+      await petsRef.doc(widget.petId).delete();
+    }
+    Get.back();
   }
 
   @override
   Widget build(BuildContext context) {
+    final isNew = widget.petId == null;
     return Scaffold(
-      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text("Pet Profile"),
+        title: Text(isNew ? "Add Pet" : "Edit Pet"),
+        actions: [
+          if (!isNew)
+            IconButton(
+              icon: const Icon(Icons.delete),
+              onPressed: _delete,
+            )
+        ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: SingleChildScrollView(
-          child: Column(
+        padding: const EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
+          child: ListView(
             children: [
-              // Pet Avatar - Image Picker
+              // avatar
               GestureDetector(
-                onTap: _pickPetImage,
+                onTap: _pickImage,
                 child: CircleAvatar(
                   radius: 60,
-                  backgroundColor: Colors.blueGrey,
-                  backgroundImage: _petImage != null
-                      ? FileImage(_petImage!)
-                      : const AssetImage('assets/icons/default_avatar.png')
+                  backgroundColor: Colors.grey.shade200,
+                  backgroundImage: _pickedImage != null
+                      ? FileImage(_pickedImage!)
+                      : (_avatarUrl != null
+                          ? NetworkImage(_avatarUrl!) 
+                          : const AssetImage('assets/icons/default_avatar.png'))
                           as ImageProvider,
-                  child: _petImage == null
-                      ? const Icon(Icons.camera_alt, color: AppColors.textSecondary)
-                      : null,
+                  child: const Icon(Icons.camera_alt, size: 32, color: Colors.grey),
                 ),
               ),
-              const SizedBox(height: 20),
 
-              // Pet Name - Text Field
-              TextField(
-                controller: _petNameController,
-                decoration: InputDecoration(
-                  labelText: 'Pet Name',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
+              const SizedBox(height: 24),
+              TextFormField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(labelText: "Name"),
+                validator: (v) => (v == null || v.isEmpty) ? "Required" : null,
               ),
-              const SizedBox(height: 20),
 
-              // Pet Gender - Dropdown Menu
+              const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _selectedGender,
-                items: _genders.map((String gender) {
-                  return DropdownMenuItem<String>(
-                    value: gender,
-                    child: Text(gender),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedGender = value;
-                  });
-                },
-                decoration: InputDecoration(
-                  labelText: 'Pet Gender',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
+                value: gender,
+                items: ['Male','Female'].map((g) =>
+                  DropdownMenuItem(value: g, child: Text(g))
+                ).toList(),
+                onChanged: (v) => setState(() => gender = v!),
+                decoration: const InputDecoration(labelText: "Gender"),
               ),
-              const SizedBox(height: 20),
 
-              // Pet Age - Slider (adjusted to work with age range)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Pet Age (years)', style: TextStyle(fontSize: 16)),
-                  Slider(
-                    value: _petAge.toDouble(),
-                    min: 0,
-                    max: 10,
-                    divisions: 10,
-                    label: _petAge.toString(),
-                    onChanged: (double newValue) {
-                      setState(() {
-                        _petAge = newValue.toInt();
-                      });
-                    },
-                  ),
-                  Text('$_petAge years', style: const TextStyle(fontSize: 14)),
-                ],
+              const SizedBox(height: 16),
+              Text("Age: $age y/o"),
+              Slider(
+                min: 0, max: 15, divisions: 15, label: "$age",
+                value: age.toDouble(),
+                onChanged: (d) => setState(() => age = d.toInt()),
               ),
-              const SizedBox(height: 20),
 
-              // Pet Weight - Slider (adjusted to a smaller range)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Pet Weight (kg)', style: TextStyle(fontSize: 16)),
-                  Slider(
-                    value: _petWeight,
-                    min: 1.0,
-                    max: 20.0,
-                    divisions: 20,
-                    label: _petWeight.toStringAsFixed(1),
-                    onChanged: (double newValue) {
-                      setState(() {
-                        _petWeight = newValue;
-                      });
-                    },
-                  ),
-                  Text('${_petWeight.toStringAsFixed(2)} kg',
-                      style: const TextStyle(fontSize: 14)),
-                ],
+              const SizedBox(height: 16),
+              Text("Weight: ${weight.toStringAsFixed(1)} kg"),
+              Slider(
+                min: 0.5, max: 30, divisions: 59, label: "${weight.toStringAsFixed(1)}",
+                value: weight,
+                onChanged: (d) => setState(() => weight = d),
               ),
-              const SizedBox(height: 40),
 
-              // Save Button
+              const SizedBox(height: 32),
               ElevatedButton(
-                onPressed: () async {
-                  String petName = _petNameController.text;
-                  String petGender = _selectedGender ?? 'Not selected';
-
-                  if (_petImage != null) {
-                    String petImageUrl = await _uploadImage(_petImage!);
-                    await _savePetProfile(
-                        petName, petGender, _petAge, _petWeight, petImageUrl);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Pet profile saved successfully!')),
-                    );
-                    Get.to(HomeScreen()); // Go back to the previous screen
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Please select a pet image.')),
-                    );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 18),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text(
-                  'Save Profile',
-                  style: TextStyle(fontSize: 18),
-                ),
+                onPressed: _save,
+                child: Text(isNew ? "Create Profile" : "Save Changes"),
               ),
             ],
           ),

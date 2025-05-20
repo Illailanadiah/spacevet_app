@@ -189,7 +189,7 @@ class _HomeScreenState extends State<HomeScreen> {
     required String photoUrl,
   }) {
     return GestureDetector(
-      onTap: () => Get.to(() => const PetProfileView()),
+      onTap: () => Get.to(() => PetProfileView(initialPetId: '')),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 10),
         padding: const EdgeInsets.all(16),

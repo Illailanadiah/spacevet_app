@@ -49,6 +49,7 @@ dependencies:
   curved_navigation_bar: ^1.0.6
   firebase_messaging: ^15.2.5
   intl: ^0.20.2
+  path_provider: ^2.1.5
   
 
     

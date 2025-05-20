@@ -2,9 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:spacevet_app/authentication/login.dart';
 import 'package:spacevet_app/color.dart';
-import 'package:spacevet_app/no_pet.dart';
+import 'package:spacevet_app/pets/no_pet.dart';
 
 class Signup extends StatefulWidget {
   const Signup({super.key});
@@ -46,6 +47,39 @@ class _SignupState extends State<Signup> {
           snackPosition: SnackPosition.BOTTOM);
       
     } 
+  }
+
+  Future<void> _signupGoogle() async {
+    try {
+      final googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) return; // user cancelled
+
+      final googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken:     googleAuth.idToken,
+      );
+      final userCred = await FirebaseAuth.instance.signInWithCredential(credential);
+
+      // pick nickname: either what they typed, or their Google displayName
+      final typedNick = nickname.text.trim();
+      final displayName = userCred.user?.displayName ?? '';
+      final finalNick = typedNick.isNotEmpty ? typedNick : displayName;
+
+      await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userCred.user!.uid)
+        .set({
+          'name': finalNick,
+          'email': userCred.user!.email,
+        });
+
+      Get.offAll(() => const NoPetScreen());
+    } catch (e) {
+      Get.snackbar("Google sign-up failed", e.toString(),
+        backgroundColor: AppColors.primary,
+        colorText: AppColors.background);
+    }
   }
 
   @override
@@ -101,6 +135,17 @@ class _SignupState extends State<Signup> {
                   child: const Text(
                     "Sign Up",
                     style: TextStyle(color: AppColors.background),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton.icon(
+                  onPressed: _signupGoogle,
+                  icon: const Icon(Icons.g_mobiledata),
+                  label: const Text("Sign Up with Google"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    minimumSize: const Size.fromHeight(50),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
                 ),
                 const SizedBox(height: 20),
