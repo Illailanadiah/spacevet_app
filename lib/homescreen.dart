@@ -1,9 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
 import 'package:local_auth/local_auth.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spacevet_app/color.dart';
 import 'package:spacevet_app/push_notifications/notifications.dart';
 import 'package:spacevet_app/pets/pet_profile_view.dart';
@@ -23,72 +23,100 @@ class _HomeScreenState extends State<HomeScreen> {
   late final String _uid;
   late final Stream<DocumentSnapshot> _userStream;
 
-  bool _isBiometricEnabled = false;
   int _currentIndex = 0;
   bool _showUpcoming = true;
+  
+   static bool _didAuthThisRun = false;
+
+  
+
 
   @override
-  void initState() {
+  Future<void> initState() async {
     super.initState();
     _uid = _user.uid;
     _userStream = FirebaseFirestore.instance
         .collection('users')
         .doc(_uid)
         .snapshots();
-    _initBiometricFlow();
+    _maybeAuthenticate();
+
+    final fcm = FirebaseMessaging.instance;
+
+// 1) Request permission (iOS & Android 13+)
+NotificationSettings settings = await fcm.requestPermission(
+  alert: true, badge: true, sound: true, provisional: false
+);
+
+// 2) Get the device token
+String? token = await fcm.getToken();
+if (token != null) {
+  // 3) Save it to Firestore under the user doc
+  final uid = FirebaseAuth.instance.currentUser!.uid;
+  await FirebaseFirestore.instance
+    .collection('users').doc(uid)
+    .update({'fcmToken': token});
+}
+
+// 4) Handle foreground messages
+FirebaseMessaging.onMessage.listen((RemoteMessage msg) {
+  // you can show a local notification here using flutter_local_notifications
+  print('FG Message: ${msg.notification?.title}');
+});
+
+// 5) Handle user taps (cold / background opens)
+FirebaseMessaging.onMessageOpenedApp.listen((msg) {
+  // navigate based on msg.data
+  print('User tapped notification: ${msg.data}');
+});
+
+
   }
 
-  Future<void> _initBiometricFlow() async {
-    final prefs = await SharedPreferences.getInstance();
-    // Already done once this session?
-    if (prefs.getBool('biometric_authenticated') ?? false) return;
+   Future<void> _maybeAuthenticate() async {
+    // if we've already done it this app run, skip entirely
+    if (_didAuthThisRun) return;
 
-    // Read flag from Firestore (default = false)
-    final shouldAuth = await _readBiometricFlag();
-    if (shouldAuth) {
-      final didAuth = await _authenticateWithBiometrics();
-      if (didAuth) {
-        await prefs.setBool('biometric_authenticated', true);
-      }
-    } else {
-      // mark it done for this session so we don't keep asking
-      await prefs.setBool('biometric_authenticated', true);
-    }
-  }
-
-  Future<bool> _readBiometricFlag() async {
+    // load the user's preference from Firestore
     final doc = await FirebaseFirestore.instance
         .collection('users')
         .doc(_uid)
         .get();
-    final data = doc.data() ?? {};
-    final enabled = data['biometric_enabled'];
-    return enabled is bool && enabled;
-  }
+    final enabled = (doc.data()?['biometric_enabled'] as bool?) ?? false;
 
-  Future<bool> _authenticateWithBiometrics() async {
-    final canCheck = await _auth.canCheckBiometrics;
-    if (!canCheck) {
-      Get.snackbar("Error", "Biometric not available",
-          backgroundColor: Colors.red, colorText: Colors.white);
-      return false;
+    if (!enabled) {
+      // mark as “done” so we don't keep asking even if they rebuild
+      _didAuthThisRun = true;
+      return;
     }
 
-    final didAuth = await _auth.authenticate(
+    // actually do the biometric prompt
+    final canCheck = await _auth.canCheckBiometrics;
+    if (!canCheck) {
+      Get.snackbar("Error", "Biometrics unavailable",
+        backgroundColor: Colors.red, colorText: Colors.white);
+      _didAuthThisRun = true;
+      return;
+    }
+
+    final success = await _auth.authenticate(
       localizedReason: "Scan your fingerprint to continue",
       options: const AuthenticationOptions(biometricOnly: true),
     );
 
     Get.snackbar(
-      didAuth ? "Success" : "Failed",
-      didAuth ? "Authenticated!" : "Fingerprint auth failed",
-      backgroundColor: didAuth ? Colors.green : Colors.red,
+      success ? "Welcome back!" : "Auth failed",
+      success
+        ? "Fingerprint accepted"
+        : "Please try again next time",
+      backgroundColor: success ? Colors.green : Colors.red,
       colorText: Colors.white,
     );
 
-    if (didAuth) setState(() => _isBiometricEnabled = true);
-    return didAuth;
+    // no matter what, don't ask again this run
+    _didAuthThisRun = true;
   }
+
 
   String _greeting() {
     final h = DateTime.now().hour;
@@ -99,6 +127,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+
+  // total screen width
+  final screenWidth = MediaQuery.of(context).size.width;
+  // left + right padding is 20 + 20 = 40
+  final cardWidth = screenWidth - 40;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -152,7 +186,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-
+              Text("Tap on a pet to view their profile",
+                  style: const TextStyle(
+                      fontSize: 16,
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w500)),
+              const SizedBox(height: 10),
               // — Pet Carousel —
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -164,14 +203,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         .doc(_uid)
                         .collection('pets')
                         .snapshots(),
-                    builder: (ctx, snap) {
-                      if (snap.connectionState == ConnectionState.waiting)
-                        return const Center(
-                            child: CircularProgressIndicator());
-                      final docs = snap.data?.docs ?? [];
-                      if (docs.isEmpty)
-                        return const Center(
-                            child: Text('No pets yet, add a profile!'));
+                   builder: (ctx, snap) {
+                    if (snap.connectionState == ConnectionState.waiting)
+                      return const Center(child: CircularProgressIndicator());
+                    final docs = snap.data?.docs ?? [];
+                    if (docs.isEmpty)
+                      return const Center(child: Text('No pets yet, add a profile!'));
+                      
                       return PageView.builder(
                         controller: PageController(viewportFraction: 0.8),
                         itemCount: docs.length,
@@ -189,7 +227,7 @@ class _HomeScreenState extends State<HomeScreen> {
               // — Event / Reminder Section —
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: _eventSection(),
+                child: _eventSection(cardWidth),
               ),
             ],
           ),
@@ -205,6 +243,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _petCard(Map<String, dynamic> pet) {
+    final gender = (pet['gender'] as String).toLowerCase();
+    final isFemale = gender.contains('female');
     return GestureDetector(
       onTap: () {
         Get.to(() => PetProfileView(initialPetId: '',));
@@ -238,11 +278,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     ]),
                     const SizedBox(height: 4),
                     Row(children: [
-                      const Icon(Icons.male, color: Colors.white, size: 16),
-                      const SizedBox(width: 4),
-                      Text(pet['gender'] as String,
-                          style: const TextStyle(color: Colors.white)),
+                      Icon(
+                        isFemale ? Icons.female : Icons.male,
+                        color: Colors.white,
+                        size: 16,
+                      ),  
+                    const SizedBox(width: 4),
+                    Text(
+                    pet['gender'] as String,
+                    style: const TextStyle(color: Colors.white),
+                    ),
                     ]),
+             
                     const SizedBox(height: 4),
                     Row(children: [
                       const Icon(Icons.monitor_weight,
@@ -263,7 +310,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _eventSection() {
+  Widget _eventSection(double cardWidth) {
     final itemsRef = FirebaseFirestore.instance
         .collection('users')
         .doc(_uid)
@@ -315,7 +362,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
               if (display.isEmpty)
                 Text(
-                  _showUpcoming ? "No upcoming items." : "No past items.",
+                  _showUpcoming ? "No upcoming reminder." : "No past reminder.",
                   style: const TextStyle(color: Colors.white70),
                 )
               else
@@ -331,8 +378,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       time: _formatTimestamp(
                           (data['timestamp'] as Timestamp).toDate()),
                       onTap: () => Get.to(
-                          () => const AddReminderScreen() /*pass existing*/),
+                          AddReminderScreen(existing: d,) /*pass existing*/),
                     ),
+                    // Pass the existing reminder data to AddReminderScreen
+                    
                   );
                 }),
             ],

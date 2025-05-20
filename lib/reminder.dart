@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:slide_to_act/slide_to_act.dart';
 import 'package:spacevet_app/bottomnav_bar.dart';
 import 'package:spacevet_app/color.dart';
+import 'package:spacevet_app/custom_icon.dart';
 
 class AddReminderScreen extends StatefulWidget {
   /// If [existing] is passed, we prefill fields and do an update/delete instead of create.
@@ -18,18 +19,34 @@ class AddReminderScreen extends StatefulWidget {
 class _AddReminderScreenState extends State<AddReminderScreen> {
   final _formKey = GlobalKey<FormState>();
 
+  // category
   bool isReminder = true; // pill vs plan
+
+  // core fields
   String title = '';
   int amount = 1;
-  int duration = 1;
+  double amountMl = 1.0;
+  int timesPerDay = 1;
+  bool pillType = true;
   bool foodBefore = true;
+
+  // scheduling
   TimeOfDay notificationTime = TimeOfDay.now();
+  DateTime selectedDate = DateTime.now();
+  final List<String> _daysOfWeek = [
+    'Mon',
+    'Tue',
+    'Wed',
+    'Thu',
+    'Fri',
+    'Sat',
+    'Sun'
+  ];
+  final Set<String> _selectedDays = {};
 
   late CollectionReference _itemsRef;
   bool _loading = false;
-
-  int currentIndex = 2; // Track the selected index for bottom navigation
-
+  int currentIndex = 2;
 
   @override
   void initState() {
@@ -40,16 +57,22 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
         .doc(uid)
         .collection('items');
 
-    // if editing, prefill
+    // if editing, prefill:
     if (widget.existing != null) {
       final data = widget.existing!.data()! as Map<String, dynamic>;
       isReminder = (data['category'] ?? 'reminder') == 'reminder';
       title = data['title'] ?? '';
       amount = data['amount'] ?? 1;
-      duration = data['duration'] ?? 1;
-      foodBefore = (data['foodBefore'] ?? true) as bool;
-      final ts = data['timestamp'] as Timestamp;
-      notificationTime = TimeOfDay.fromDateTime(ts.toDate());
+      amountMl = (data['amountMl'] as num?)?.toDouble() ?? 1.0;
+      timesPerDay = data['timesPerDay'] ?? 1;
+      pillType = data['pillType'] ?? true;
+      foodBefore = data['foodBefore'] ?? true;
+
+      final ts = (data['timestamp'] as Timestamp).toDate();
+      notificationTime = TimeOfDay.fromDateTime(ts);
+      selectedDate = ts;
+      final days = (data['days'] as List<dynamic>?)?.cast<String>() ?? [];
+      _selectedDays.addAll(days);
     }
   }
 
@@ -61,27 +84,41 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
     if (t != null) setState(() => notificationTime = t);
   }
 
+  Future<void> _pickDate() async {
+    final d = await showDatePicker(
+      context: context,
+      initialDate: selectedDate,
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
+    );
+    if (d != null) setState(() => selectedDate = d);
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     _formKey.currentState!.save();
 
     setState(() => _loading = true);
+
+    // Build a DateTime with today's date at the chosen time:
     final now = DateTime.now();
-    // Build a DateTime with today's date and chosen time
-    final notifDateTime = DateTime(
-      now.year, now.month, now.day,
-      notificationTime.hour, notificationTime.minute,
-    );
+    final startDT = DateTime(now.year, now.month, now.day,
+        notificationTime.hour, notificationTime.minute);
+
+    // milliseconds between doses:
+    final intervalMs = (24 * 60 * 60 * 1000) ~/ timesPerDay;
 
     final docData = {
       'category': isReminder ? 'reminder' : 'plan',
       'title': title,
-      'amount': amount,
-      'duration': duration,
-      'foodBefore': foodBefore,
-      'timestamp': Timestamp.fromDate(notifDateTime),
+      'timesPerDay': timesPerDay,
+      'startTime': Timestamp.fromDate(startDT),
+      'intervalMs': intervalMs,
       'createdAt': FieldValue.serverTimestamp(),
+      // … any other fields …
     };
+
+    await _itemsRef.add(docData);
 
     try {
       if (widget.existing != null) {
@@ -89,11 +126,11 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
       } else {
         await _itemsRef.add(docData);
       }
+      // pop back
       Navigator.of(context).pop();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error saving: $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
       setState(() => _loading = false);
     }
@@ -110,7 +147,9 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text(widget.existing != null ? 'Edit ${isReminder ? "Reminder" : "Plan"}' : 'Add ${isReminder ? "Reminder" : "Plan"}'),
+        title: Text(widget.existing != null
+            ? 'Edit ${isReminder ? "Reminder" : "Plan"}'
+            : 'Add ${isReminder ? "Reminder" : "Plan"}'),
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.background,
         centerTitle: true,
@@ -135,22 +174,22 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
                 child: ListView(
                   children: [
                     // Category toggle
-                    Text('Categories', style: Theme.of(context).textTheme.titleMedium),
+                    Text('Categories',
+                        style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        _categoryButton(Icons.medication, 'Reminder', isReminder, () {
-                          setState(() => isReminder = true);
-                        }),
-                        const SizedBox(width: 16),
-                        _categoryButton(Icons.event, 'Plan', !isReminder, () {
-                          setState(() => isReminder = false);
-                        }),
-                      ],
-                    ),
+                    Row(children: [
+                      _categoryButton(Icons.medication, 'Reminder', isReminder,
+                          () {
+                        setState(() => isReminder = true);
+                      }),
+                      const SizedBox(width: 16),
+                      _categoryButton(Icons.event, 'Plan', !isReminder, () {
+                        setState(() => isReminder = false);
+                      }),
+                    ]),
 
                     const SizedBox(height: 24),
-                    // Title input
+                    // Title
                     Text(
                       isReminder ? 'Medicine name' : 'Event title',
                       style: Theme.of(context).textTheme.titleMedium,
@@ -159,64 +198,155 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
                     TextFormField(
                       initialValue: title,
                       decoration: InputDecoration(
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        prefixIcon: Icon(isReminder ? Icons.medication : Icons.event),
-                        hintText: isReminder ? 'e.g. Oxycodone' : 'e.g. Vet Visit',
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        prefixIcon:
+                            Icon(isReminder ? Icons.medication : Icons.event),
+                        hintText:
+                            isReminder ? 'e.g. Oxycodone' : 'e.g. Vet Visit',
                       ),
-                      validator: (s) => (s == null || s.isEmpty) ? 'Required' : null,
+                      validator: (s) =>
+                          (s == null || s.isEmpty) ? 'Required' : null,
                       onSaved: (s) => title = s!.trim(),
                     ),
 
                     const SizedBox(height: 24),
-                    // Amount & duration
+                    if (isReminder) ...[
+                      // Amount VT
+                      Text('Dose Amount',
+                          style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        initialValue: pillType ? '$amount' : '$amountMl',
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          suffixText: pillType ? 'pill' : 'ml',
+                        ),
+                        keyboardType: TextInputType.numberWithOptions(
+                            decimal: !pillType, signed: false),
+                        inputFormatters: pillType
+                            ? [FilteringTextInputFormatter.digitsOnly]
+                            : [
+                                FilteringTextInputFormatter.allow(
+                                    RegExp(r'^\d+\.?\d{0,2}'))
+                              ],
+                        onSaved: (s) {
+                          if (pillType)
+                            amount = int.tryParse(s!) ?? amount;
+                          else
+                            amountMl = double.tryParse(s!) ?? amountMl;
+                        },
+                      ),
+
+                      const SizedBox(height: 24),
+                    ],
+
                     Row(
                       children: [
-                        Expanded(
-                          child: _numberField(
-                            label: 'Amount',
-                            value: amount,
-                            onChanged: (v) => setState(() => amount = v),
-                          ),
-                        ),
+                        Icon(Icons.timelapse),
+                        const Text('Times per day:'),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: _numberField(
-                            label: 'Duration (days)',
-                            value: duration,
-                            onChanged: (v) => setState(() => duration = v),
+                          child: DropdownButtonFormField<int>(
+                            value: timesPerDay,
+                            decoration: InputDecoration(
+                                border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12))),
+                            items: List.generate(6, (i) => i + 1)
+                                .map((n) => DropdownMenuItem(
+                                    value: n, child: Text('$n')))
+                                .toList(),
+                            onChanged: (v) => setState(() => timesPerDay = v!),
                           ),
                         ),
                       ],
                     ),
-
                     const SizedBox(height: 24),
                     if (isReminder) ...[
-                      Text('Take Medicine:', style: Theme.of(context).textTheme.titleMedium),
+                      // Pill type & food before/after
+                      Text('Medicine Type',
+                          style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          _iconToggle(Icons.fastfood, 'Before', foodBefore, () {
-                            setState(() => foodBefore = true);
-                          }),
-                          const SizedBox(width: 16),
-                          _iconToggle(Icons.restaurant, 'After', !foodBefore, () {
-                            setState(() => foodBefore = false);
-                          }),
-                        ],
-                      ),
+                      Row(children: [
+                        _iconToggle(CustomIcon.pill_1, 'Pill', pillType, () {
+                          setState(() => pillType = true);
+                        }),
+                        const SizedBox(width: 16),
+                        _iconToggle(CustomIcon.liquid, 'Syrup', !pillType, () {
+                          setState(() => pillType = false);
+                        }),
+                      ]),
+                      const SizedBox(height: 24),
+                      Text('Take Medicine',
+                          style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 8),
+                      Row(children: [
+                        _iconToggle(CustomIcon.before_eat, 'Before', foodBefore,
+                            () {
+                          setState(() => foodBefore = true);
+                        }),
+                        const SizedBox(width: 16),
+                        _iconToggle(CustomIcon.after_eat, 'After', !foodBefore,
+                            () {
+                          setState(() => foodBefore = false);
+                        }),
+                      ]),
                       const SizedBox(height: 24),
                     ],
 
-                    // Notification time
-                    Text('Notification', style: Theme.of(context).textTheme.titleMedium),
+                    // Date picker
+                    Text('Select Date',
+                        style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 8),
                     ListTile(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      tileColor: Colors.grey.shade200,
+                      leading: const Icon(Icons.calendar_today),
+                      title: Text(
+                          '${selectedDate.month}/${selectedDate.day}/${selectedDate.year}'),
+                      trailing: IconButton(
+                          icon: const Icon(Icons.edit), onPressed: _pickDate),
+                    ),
+
+                    const SizedBox(height: 24),
+                    // Days of week
+                    Text('Repeat On',
+                        style: Theme.of(context).textTheme.titleMedium),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: _daysOfWeek.map((d) {
+                        final sel = _selectedDays.contains(d);
+                        return ChoiceChip(
+                          label: Text(d),
+                          selected: sel,
+                          onSelected: (yes) {
+                            setState(() {
+                              if (yes)
+                                _selectedDays.add(d);
+                              else
+                                _selectedDays.remove(d);
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+
+                    const SizedBox(height: 24),
+                    // Time picker
+                    Text('Reminder Time',
+                        style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 8),
+                    ListTile(
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                       tileColor: Colors.grey.shade200,
                       leading: const Icon(Icons.notifications),
                       title: Text(notificationTime.format(context)),
                       trailing: IconButton(
-                        icon: const Icon(Icons.add),
+                        icon: const Icon(Icons.edit),
                         onPressed: _pickTime,
                       ),
                     ),
@@ -224,72 +354,63 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
                     const SizedBox(height: 32),
                     // Save slider
                     SlideAction(
-                      text: widget.existing != null ? 'Update' : 'Save',
-                      innerColor: Colors.white,
-                      outerColor: AppColors.primary,
-                      onSubmit: _save,
+                      borderRadius: 12,
+                      elevation: 0,
+                      innerColor: AppColors.primary,
+                      outerColor: AppColors.textSecondary,
+                      sliderButtonIcon:
+                          const Icon(Icons.check, color: AppColors.background),
+                      text: widget.existing != null
+                          ? 'Swipe to Update'
+                          : 'Swipe to Save',
+                      textStyle: const TextStyle(
+                          color: AppColors.background, fontSize: 16),
+                      onSubmit: () async {
+                        await _save();
+                        // give the slide a chance to animate back
+                        await Future.delayed(const Duration(milliseconds: 300));
+                        if (!mounted) return;
+                        Navigator.of(context).pop();
+                      },
                     ),
                   ],
                 ),
               ),
             ),
-            bottomNavigationBar: BottomnavBar(  // Add the BottomnavBar
-        currentIndex: currentIndex,  // Set the current index for the bottom nav bar
-        onTap: (index) {
-          setState(() {
-            currentIndex = index;  // Update the selected tab index
-            // Handle navigation based on index
-          });
-        },
+      bottomNavigationBar: BottomnavBar(
+        currentIndex: currentIndex,
+        onTap: (index) => setState(() => currentIndex = index),
       ),
     );
   }
 
-  Widget _categoryButton(IconData icon, String label, bool selected, VoidCallback onTap) {
+  Widget _categoryButton(
+      IconData icon, String label, bool selected, VoidCallback onTap) {
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
         child: Container(
-          height: 60,
-          decoration: BoxDecoration(
-            color: selected ? AppColors.primary : Colors.grey.shade200,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Center(
-            child: Icon(icon, size: 32, color: selected ? Colors.white : AppColors.primary),
-          ),
-        ),
+            height: 60,
+            decoration: BoxDecoration(
+              color: selected ? AppColors.primary : Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child:
+                Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Icon(icon,
+                  size: 32, color: selected ? Colors.white : AppColors.primary),
+              const SizedBox(height: 4),
+              Text(label,
+                  style: TextStyle(
+                      color: selected ? Colors.white : AppColors.primary,
+                      fontSize: 12)),
+            ])),
       ),
     );
   }
 
-  Widget _numberField({
-    required String label,
-    required int value,
-    required ValueChanged<int> onChanged,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label),
-        const SizedBox(height: 4),
-        TextFormField(
-          initialValue: '$value',
-          decoration: InputDecoration(
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-          keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          onChanged: (s) {
-            final v = int.tryParse(s) ?? 1;
-            onChanged(v);
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _iconToggle(IconData icon, String semantic, bool selected, VoidCallback onTap) {
+  Widget _iconToggle(
+      IconData icon, String semantic, bool selected, VoidCallback onTap) {
     return Expanded(
       child: Semantics(
         label: semantic,
@@ -302,12 +423,12 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(
-              child: Icon(icon, size: 32, color: selected ? Colors.white : AppColors.primary),
-            ),
+                child: Icon(icon,
+                    size: 32,
+                    color: selected ? Colors.white : AppColors.primary)),
           ),
         ),
       ),
     );
   }
 }
-

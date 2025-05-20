@@ -97,7 +97,7 @@ class _NoPetScreenState extends State<NoPetScreen> {
                   SlideAction(
                     borderRadius: 12,
                     elevation: 0,
-                    innerColor: AppColors.primary,
+                    innerColor: AppColors.background,
                     outerColor: AppColors.textSecondary,
                     sliderButtonIcon: const Icon(
                       Icons.arrow_forward,

@@ -1,9 +1,9 @@
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:spacevet_app/chatbot.dart';
 import 'package:spacevet_app/color.dart';
 import 'package:spacevet_app/homescreen.dart';
-import 'package:spacevet_app/pets/pet_profile_view.dart';
 import 'package:spacevet_app/reminder.dart';
 import 'package:spacevet_app/settings/setting_screen.dart';
 import 'package:spacevet_app/symptom_detection_screen.dart';
@@ -23,18 +23,18 @@ class BottomnavBar extends StatelessWidget {
     return CurvedNavigationBar(
       index: currentIndex,
       height: 60.0,
-      color: Colors.transparent,
+      color: AppColors.primary,
       buttonBackgroundColor: AppColors.primary,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.background,
       items: const <Widget>[
-        Icon(Icons.home, size: 30, color: AppColors.textSecondary), // Navigate to HomeScreen
-        Icon(Icons.camera_enhance, size: 30, color: AppColors.textSecondary),
-        Icon(Icons.event, size: 30, color: AppColors.textSecondary), // Navigate to SymptomDetection
-        Icon(Icons.pets_rounded,size: 30, color: AppColors.textSecondary), // Navigate to PetProfileScreen
-        Icon(Icons.person, size: 30, color: AppColors.textSecondary),
+        Icon(Icons.home, size: 30, color: AppColors.background), // Navigate to HomeScreen
+        Icon(Icons.camera_enhance, size: 30, color: AppColors.background),
+        Icon(Icons.event, size: 30, color: AppColors.background), // Navigate to SymptomDetection
+        Icon(Icons.chat_bubble,size: 30, color: AppColors.background), // Navigate to PetProfileScreen
+        Icon(Icons.person, size: 30, color: AppColors.background),
          // Navigate to Setting screen
       ],
-      animationCurve: Curves.easeInOut,
+      animationCurve: Curves.easeOut,
       animationDuration: const Duration(milliseconds: 600),
       onTap: (index) {
         onTap(index); // Call onTap to handle navigation
@@ -60,7 +60,7 @@ class BottomnavBar extends StatelessWidget {
         break;
       case 3:
         // Navigate to Settings screen
-        Get.to(() =>  PetProfileView(initialPetId: '',));
+        Get.to(() =>  Chatbot());
         break;
       case 4:
         // Navigate to Settings screen

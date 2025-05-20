@@ -235,11 +235,11 @@ class _SymptomDetectionScreenState extends State<SymptomDetectionScreen> {
                 outerColor: AppColors.textSecondary,
                 text: 'Swipe to Continue',
                 textStyle:
-                    const TextStyle(color: Colors.white, fontSize: 16),
+                    const TextStyle(color: AppColors.background, fontSize: 16),
                 onSubmit: _onSwipeContinue,
                 sliderButtonIcon: const Icon(
                   Icons.arrow_forward_ios,
-                  color: Colors.white,
+                  color: AppColors.background,
                 ),
                 borderRadius: 12,
                 elevation: 0,

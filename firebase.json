@@ -1,1 +1,35 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"space-vet-app","appId":"1:773377368977:android:22fcad19352c9bc24cb030","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"space-vet-app","configurations":{"android":"1:773377368977:android:22fcad19352c9bc24cb030","ios":"1:773377368977:ios:5e2b74a869e7f6724cb030"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "space-vet-app",
+          "appId": "1:773377368977:android:22fcad19352c9bc24cb030",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "space-vet-app",
+          "configurations": {
+            "android": "1:773377368977:android:22fcad19352c9bc24cb030",
+            "ios": "1:773377368977:ios:5e2b74a869e7f6724cb030"
+          }
+        }
+      }
+    }
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ]
+    }
+  ]
+}

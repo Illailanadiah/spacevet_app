@@ -16,7 +16,11 @@ class _NotificationsState extends State<Notifications> {
       appBar: AppBar(
         title: const Text("Notifications"),
         centerTitle: true,
-        backgroundColor: Colors.blue,
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.background,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
+        ),
       ),
       body: Center(
         child: Text(

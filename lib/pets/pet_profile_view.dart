@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:spacevet_app/bottomnav_bar.dart';
 import 'package:spacevet_app/color.dart';
 import 'package:spacevet_app/pets/add_pet_screen.dart';
 
@@ -21,7 +20,6 @@ class _PetProfileViewState extends State<PetProfileView> {
   List<QueryDocumentSnapshot> _docs = [];
   late PageController _pageController;
   bool _hasController = false;
-      int currentIndex = 3; // Track the selected index for bottom navigation
 
 
   @override
@@ -80,15 +78,7 @@ class _PetProfileViewState extends State<PetProfileView> {
           },
         ),
       ),
-      bottomNavigationBar: BottomnavBar(  // Add the BottomnavBar
-        currentIndex: currentIndex,  // Set the current index for the bottom nav bar
-        onTap: (index) {
-          setState(() {
-            currentIndex = index;  // Update the selected tab index
-            // Handle navigation based on index
-          });
-        },
-      ),
+      
     );
   }
 
