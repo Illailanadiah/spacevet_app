@@ -113,7 +113,7 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
       'category': isReminder ? 'reminder' : 'plan',
       'title': title,
       'timesPerDay': timesPerDay,
-      'startTime': Timestamp.fromDate(startDT),
+      'timestamp': Timestamp.fromDate(startDT),
       'intervalMs': intervalMs,
       'createdAt': FieldValue.serverTimestamp(),
       // … any other fields …
