@@ -168,7 +168,7 @@ FirebaseMessaging.onMessageOpenedApp.listen((msg) {
                         Icons.notifications_active_outlined,
                         color: AppColors.textPrimary,
                       ),
-                      onPressed: () => Get.to(() => Notifications()),
+                      onPressed: () => Get.to(() => NotificationsScreen()),
                     ),
                   ],
                 ),
