@@ -12,7 +12,6 @@ import 'package:spacevet_app/wrapper.dart';
 /// 1) Background message handler must be a top-level function
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage msg) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  // you can also show a local notification here if desired
 }
 
 final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =

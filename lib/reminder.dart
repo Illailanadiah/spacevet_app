@@ -18,6 +18,7 @@ class AddReminderScreen extends StatefulWidget {
 
 class _AddReminderScreenState extends State<AddReminderScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _slideKey = GlobalKey<SlideActionState>();
 
   // category
   bool isReminder = true; // pill vs plan
@@ -141,6 +142,14 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
     await _itemsRef.doc(widget.existing!.id).delete();
     Navigator.of(context).pop();
   }
+
+  Future<void> _onSlideSubmit() async {
+    await _save();                           // your save logic
+    await _slideKey.currentState?.reset();   // WAIT for the slider to animate back
+    if (!mounted) return;
+    Navigator.of(context).pop();             // now it’s safe to pop
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -354,6 +363,7 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
                     const SizedBox(height: 32),
                     // Save slider
                     SlideAction(
+                      key: _slideKey,
                       borderRadius: 12,
                       elevation: 0,
                       innerColor: AppColors.primary,
@@ -365,13 +375,7 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
                           : 'Swipe to Save',
                       textStyle: const TextStyle(
                           color: AppColors.background, fontSize: 16),
-                      onSubmit: () async {
-                        await _save();
-                        // give the slide a chance to animate back
-                        await Future.delayed(const Duration(milliseconds: 300));
-                        if (!mounted) return;
-                        Navigator.of(context).pop();
-                      },
+                      onSubmit: _onSlideSubmit,
                     ),
                   ],
                 ),

@@ -25,63 +25,31 @@ class _HomeScreenState extends State<HomeScreen> {
 
   int _currentIndex = 0;
   bool _showUpcoming = true;
-  
-   static bool _didAuthThisRun = false;
 
-  
-
+  static bool _didAuthThisRun = false;
 
   @override
-  Future<void> initState() async {
+  void initState() {
     super.initState();
     _uid = _user.uid;
-    _userStream = FirebaseFirestore.instance
-        .collection('users')
-        .doc(_uid)
-        .snapshots();
-    _maybeAuthenticate();
+    _userStream =
+        FirebaseFirestore.instance.collection('users').doc(_uid).snapshots();
 
-    final fcm = FirebaseMessaging.instance;
-
-// 1) Request permission (iOS & Android 13+)
-NotificationSettings settings = await fcm.requestPermission(
-  alert: true, badge: true, sound: true, provisional: false
-);
-
-// 2) Get the device token
-String? token = await fcm.getToken();
-if (token != null) {
-  // 3) Save it to Firestore under the user doc
-  final uid = FirebaseAuth.instance.currentUser!.uid;
-  await FirebaseFirestore.instance
-    .collection('users').doc(uid)
-    .update({'fcmToken': token});
-}
-
-// 4) Handle foreground messages
-FirebaseMessaging.onMessage.listen((RemoteMessage msg) {
-  // you can show a local notification here using flutter_local_notifications
-  print('FG Message: ${msg.notification?.title}');
-});
-
-// 5) Handle user taps (cold / background opens)
-FirebaseMessaging.onMessageOpenedApp.listen((msg) {
-  // navigate based on msg.data
-  print('User tapped notification: ${msg.data}');
-});
-
-
+    _initialize();
   }
 
-   Future<void> _maybeAuthenticate() async {
+  Future<void> _initialize() async {
+    await _maybeAuthenticate();
+    await _configureFCM();
+  }
+
+  Future<void> _maybeAuthenticate() async {
     // if we've already done it this app run, skip entirely
     if (_didAuthThisRun) return;
 
     // load the user's preference from Firestore
-    final doc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(_uid)
-        .get();
+    final doc =
+        await FirebaseFirestore.instance.collection('users').doc(_uid).get();
     final enabled = (doc.data()?['biometric_enabled'] as bool?) ?? false;
 
     if (!enabled) {
@@ -94,7 +62,7 @@ FirebaseMessaging.onMessageOpenedApp.listen((msg) {
     final canCheck = await _auth.canCheckBiometrics;
     if (!canCheck) {
       Get.snackbar("Error", "Biometrics unavailable",
-        backgroundColor: Colors.red, colorText: Colors.white);
+          backgroundColor: Colors.red, colorText: Colors.white);
       _didAuthThisRun = true;
       return;
     }
@@ -106,9 +74,7 @@ FirebaseMessaging.onMessageOpenedApp.listen((msg) {
 
     Get.snackbar(
       success ? "Welcome back!" : "Auth failed",
-      success
-        ? "Fingerprint accepted"
-        : "Please try again next time",
+      success ? "Fingerprint accepted" : "Please try again next time",
       backgroundColor: success ? Colors.green : Colors.red,
       colorText: Colors.white,
     );
@@ -117,6 +83,33 @@ FirebaseMessaging.onMessageOpenedApp.listen((msg) {
     _didAuthThisRun = true;
   }
 
+  Future<void> _configureFCM() async {
+    final fcm = FirebaseMessaging.instance;
+
+    // 1) Request permissions
+    await fcm.requestPermission(alert: true, badge: true, sound: true);
+
+    // 2) Grab FCM token
+    final token = await fcm.getToken();
+    if (token != null) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_uid)
+          .update({'fcmToken': token});
+    }
+
+    // 3) Foreground listener
+    FirebaseMessaging.onMessage.listen((msg) {
+      print('FG Message: ${msg.notification?.title}');
+      // TODO: show local notification via flutter_local_notifications
+    });
+
+    // 4) Tapped notification (cold/background)
+    FirebaseMessaging.onMessageOpenedApp.listen((msg) {
+      print('Notification tapped: ${msg.data}');
+      // TODO: navigate if needed
+    });
+  }
 
   String _greeting() {
     final h = DateTime.now().hour;
@@ -127,11 +120,10 @@ FirebaseMessaging.onMessageOpenedApp.listen((msg) {
 
   @override
   Widget build(BuildContext context) {
-
-  // total screen width
-  final screenWidth = MediaQuery.of(context).size.width;
-  // left + right padding is 20 + 20 = 40
-  final cardWidth = screenWidth - 40;
+    // total screen width
+    final screenWidth = MediaQuery.of(context).size.width;
+    // left + right padding is 20 + 20 = 40
+    final cardWidth = screenWidth - 40;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -151,7 +143,8 @@ FirebaseMessaging.onMessageOpenedApp.listen((msg) {
                       builder: (ctx, snap) {
                         if (snap.connectionState == ConnectionState.waiting)
                           return const CircularProgressIndicator();
-                        final data = snap.data?.data() as Map<String, dynamic>? ?? {};
+                        final data =
+                            snap.data?.data() as Map<String, dynamic>? ?? {};
                         final name = data['name'] as String? ?? 'Guest';
                         return Text(
                           'Hi, $name!',
@@ -203,13 +196,14 @@ FirebaseMessaging.onMessageOpenedApp.listen((msg) {
                         .doc(_uid)
                         .collection('pets')
                         .snapshots(),
-                   builder: (ctx, snap) {
-                    if (snap.connectionState == ConnectionState.waiting)
-                      return const Center(child: CircularProgressIndicator());
-                    final docs = snap.data?.docs ?? [];
-                    if (docs.isEmpty)
-                      return const Center(child: Text('No pets yet, add a profile!'));
-                      
+                    builder: (ctx, snap) {
+                      if (snap.connectionState == ConnectionState.waiting)
+                        return const Center(child: CircularProgressIndicator());
+                      final docs = snap.data?.docs ?? [];
+                      if (docs.isEmpty)
+                        return const Center(
+                            child: Text('No pets yet, add a profile!'));
+
                       return PageView.builder(
                         controller: PageController(viewportFraction: 0.8),
                         itemCount: docs.length,
@@ -247,7 +241,9 @@ FirebaseMessaging.onMessageOpenedApp.listen((msg) {
     final isFemale = gender.contains('female');
     return GestureDetector(
       onTap: () {
-        Get.to(() => PetProfileView(initialPetId: '',));
+        Get.to(() => PetProfileView(
+              initialPetId: '',
+            ));
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 10),
@@ -282,14 +278,13 @@ FirebaseMessaging.onMessageOpenedApp.listen((msg) {
                         isFemale ? Icons.female : Icons.male,
                         color: Colors.white,
                         size: 16,
-                      ),  
-                    const SizedBox(width: 4),
-                    Text(
-                    pet['gender'] as String,
-                    style: const TextStyle(color: Colors.white),
-                    ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        pet['gender'] as String,
+                        style: const TextStyle(color: Colors.white),
+                      ),
                     ]),
-             
                     const SizedBox(height: 4),
                     Row(children: [
                       const Icon(Icons.monitor_weight,
@@ -377,11 +372,11 @@ FirebaseMessaging.onMessageOpenedApp.listen((msg) {
                       title: data['title'] as String,
                       time: _formatTimestamp(
                           (data['timestamp'] as Timestamp).toDate()),
-                      onTap: () => Get.to(
-                          AddReminderScreen(existing: d,) /*pass existing*/),
+                      onTap: () => Get.to(AddReminderScreen(
+                        existing: d,
+                      ) /*pass existing*/),
                     ),
                     // Pass the existing reminder data to AddReminderScreen
-                    
                   );
                 }),
             ],
@@ -430,8 +425,8 @@ FirebaseMessaging.onMessageOpenedApp.listen((msg) {
                         color: Colors.black, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
                 Text(time,
-                    style: const TextStyle(
-                        color: Colors.black54, fontSize: 12)),
+                    style:
+                        const TextStyle(color: Colors.black54, fontSize: 12)),
               ],
             ),
           ),
@@ -443,9 +438,10 @@ FirebaseMessaging.onMessageOpenedApp.listen((msg) {
 
   String _formatTimestamp(DateTime dt) {
     final now = DateTime.now();
-    final date = (dt.year == now.year && dt.month == now.month && dt.day == now.day)
-        ? 'Today'
-        : '${dt.month}/${dt.day}/${dt.year}';
+    final date =
+        (dt.year == now.year && dt.month == now.month && dt.day == now.day)
+            ? 'Today'
+            : '${dt.month}/${dt.day}/${dt.year}';
     final time = TimeOfDay.fromDateTime(dt).format(context);
     return '$date | $time';
   }
