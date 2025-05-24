@@ -20,6 +20,7 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
   final _formKey = GlobalKey<FormState>();
   final _slideKey = GlobalKey<SlideActionState>();
 
+
   // category
   bool isReminder = true; // pill vs plan
 
@@ -145,7 +146,8 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
 
   Future<void> _onSlideSubmit() async {
     await _save();                           // your save logic
-    await _slideKey.currentState?.reset();   // WAIT for the slider to animate back
+    await _slideKey.currentState?.reset();
+    await Future.delayed(const Duration(milliseconds: 350));   // WAIT for the slider to animate back
     if (!mounted) return;
     Navigator.of(context).pop();             // now it’s safe to pop
   }
@@ -361,6 +363,7 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
                     ),
 
                     const SizedBox(height: 32),
+                    
                     // Save slider
                     SlideAction(
                       key: _slideKey,

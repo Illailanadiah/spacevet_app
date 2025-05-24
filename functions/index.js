@@ -29,7 +29,7 @@ exports.onReminderCreated = functions
   .document('users/{uid}/items/{itemId}')
   .onCreate(async (snap, ctx) => {
     const data = snap.data();
-    const { startTime, intervalMs, title, category } = data;
+    const { timestamp, intervalMs, title, category } = data;
     const uid       = ctx.params.uid;
     const itemId    = ctx.params.itemId;
     const userDoc   = await admin.firestore().collection('users').doc(uid).get();
@@ -43,7 +43,7 @@ exports.onReminderCreated = functions
       body: `⏰ Time for ${category=='reminder'?'your meds':'your event'}: ${title}`,
       intervalMs,
     };
-    await scheduleTask(itemId, payload, startTime.toDate());
+    await scheduleTask(itemId, payload, timestamp.toDate());
   });
 
 // HTTP function triggered by Cloud Tasks
